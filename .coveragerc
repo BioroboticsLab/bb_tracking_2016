@@ -1,0 +1,2 @@
+[run]
+omit = bb_tracking/validation/visualization*

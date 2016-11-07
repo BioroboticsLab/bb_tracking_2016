@@ -1,0 +1,6 @@
+pytest>=3.0.0
+pytest-cov>=2.4.0
+pytest-flake8>=0.8.1
+pytz>=2016
+Sphinx>=1.4.8
+sphinx-rtd-theme>=0.1.9

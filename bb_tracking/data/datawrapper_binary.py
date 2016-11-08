@@ -169,7 +169,7 @@ class DataWrapperBinary(DataWrapper):
 class DataWrapperTruthBinary(DataWrapperBinary, DataWrapperTruth):
     """Class for fast access to truth data via *bb_binary* :class:`Repository`.
 
-    This class if recommended for performance reasons and only compatible to the *bb_binary* format.
+    This class is recommended for performance reasons and only compatible to the *bb_binary* format.
     It uses dictionaries for fast lookup and cheap memory because the :obj:`.Detection` objects are
     shared between the different dictionaries.
 

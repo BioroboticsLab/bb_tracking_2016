@@ -1,0 +1,8 @@
+formats:
+    - htmlzip
+    - pdf
+
+requirements_file: docs/requirements.txt
+
+python:
+    version: 3

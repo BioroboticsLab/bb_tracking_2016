@@ -80,6 +80,7 @@ class DataWrapperBinary(DataWrapper):
         self.timestamps = list(sorted(timestamps))
         self.cam_timestamps = {cam_id: list(sorted(tstamps))
                                for cam_id, tstamps in cam_timestamps.items()}
+        assert len(self.detections_dict) > 0, "Repository is empty."
 
     def _iterate_detections(self, frame, cam_id, meta_keys):
         """Helper to iterate through detections and extract information.
@@ -215,6 +216,7 @@ class DataWrapperTruthBinary(DataWrapperBinary, DataWrapperTruth):
             self._match_truth_with_pipeline(cam_id, frame, xy_cols, frame_truth_ids, radius)
         self._sort_track_values()
         self._calc_tp_fp()
+        assert len(self.positives) > 0, "No matched detections!"
 
     def _init_truth_tracks(self, cam_id, frame):
         """Initialize truth tracks and extract x- and y-positions from detections."""

@@ -54,6 +54,7 @@ class DataWrapperTracks(DataWrapper):
             data (Optional :class:`.DataWrapper`): A DataWrapper provides access to detections.
             end_offset (Optional int): The track will end on ``len(track) - end_offset``
         """
+        assert len(tracks) > 0, "No tracks!"
         self.cam_ids = list(cam_timestamps.keys())
         self.cam_timestamps = cam_timestamps
         timestamps = list()

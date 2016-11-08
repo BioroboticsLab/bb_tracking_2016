@@ -4,6 +4,19 @@ Data
 Datastructures
 --------------
 .. automodule:: bb_tracking.data.datastructures
+    :no-members:
+
+.. autoclass:: bb_tracking.data.datastructures.Detection
+    :no-members:
+
+.. autoclass:: bb_tracking.data.datastructures.Track
+    :no-members:
+
+.. autoclass:: bb_tracking.data.datastructures.Score
+    :no-members:
+
+.. autoclass:: bb_tracking.data.datastructures.ScoreMetrics
+    :no-members:
 
 Constants
 ~~~~~~~~~

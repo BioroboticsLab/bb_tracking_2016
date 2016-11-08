@@ -3,8 +3,8 @@
 
 Note that :obj:`collections.namedtuple` are used for fast data exchange objects but they do
 not support docstring in Python 2. Setting the docstring is only possible in Python 3.
-So depending on the Python version that was used to compile the documentation there will be some
-missing information.
+So depending on the Python version that was used to compile the documentation the documentation for
+the datastructures are missing.
 """
 from collections import namedtuple
 from six import PY3
@@ -14,7 +14,7 @@ if PY3:
     Detection.__doc__ = """
 A :obj:`Detection` is one data point produced where (possibly) a bee was observed.
 
-Keyword Arguments:
+Attributes:
     id (int or str): identifier for detection
     timestamp (time representation): timestamp of detection
     x (float): x position in image coordinates
@@ -40,7 +40,7 @@ meta field. The key identifier for the list of detections in the meta field is :
 Note:
     It might be necessary to clear the meta dictionary after some processing steps to free memory.
 
-Keyword Arguments:
+Attributes:
     id (int or str): identifier for :obj:`Track`
     ids (list of :obj:`Detection`): iterable with ids of :obj:`Detection`
     timestamps (iterable): iterable with timestamps of detections
@@ -53,7 +53,7 @@ if PY3:
     Score.__doc__ = """
 A :obj:`Score` defines how similar two :obj:`Track` objects are.
 
-Keyword Arguments:
+Attributes:
     value (float): The scoring value calculated via a scoring function using the :obj:`ScoreMetrics`
     track_id (int or str): :obj:`Track` id we are scoring
     truth_id (int or str): truth id of the :obj:`Track` we are matching against
@@ -69,7 +69,7 @@ if PY3:
     ScoreMetrics.__doc__ = """
 A :obj:`ScoreMetrics` provides metrics to determine how similar two :obj:`Track` objects are.
 
-Keyword Arguments:
+Attributes:
     track_length (int): length of :obj:`Track` **including** gaps
     truth_track_length (int): length of truth track we are matching against
     adjusted_length (int): length of :obj:`Track` with added gaps left and right

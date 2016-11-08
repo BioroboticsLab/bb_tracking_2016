@@ -1,7 +1,7 @@
 numpy>=1.10.4
 matplotlib>=1.5.3
-pandas>=0.18
-scikit-learn>=0.17.1
+pandas>=0.17.1
+scikit-learn>=0.18
 scipy>=0.17.0
 six>=1.1.0
 git+https://github.com/BioroboticsLab/bb_binary.git#egg=bb_binary

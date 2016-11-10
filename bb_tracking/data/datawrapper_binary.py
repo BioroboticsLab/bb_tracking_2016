@@ -45,7 +45,7 @@ class DataWrapperBinary(DataWrapper):
 
         Keyword Arguments:
             meta_keys (Optional :obj:`dict`): ``{detecion_key: meta_key}`` mapping that is added
-                as meta field in detections
+                as meta field in detections (detection fields defined in the *bb_binary* schema)
             **kwargs (:obj:`dict`): keyword arguments for :func:`Repository.iter_frames()`
         """
         # convert detections to python objects and create dictionaries for fast lookup
@@ -92,7 +92,7 @@ class DataWrapperBinary(DataWrapper):
             frame (Frame): bb_binary Frame object
             cam_id (int): the id of the camera this frame belongs to
             meta_keys (Optional :obj:`dict`): ``{detecion_key: meta_key}``mapping that is added
-                as meta field in detections
+                as meta field in detections (detection fields defined in the *bb_binary* schema)
         """
         xy_cols = list()
         timestamp = to_datetime(frame.timestamp)
@@ -244,12 +244,12 @@ class DataWrapperTruthBinary(DataWrapperBinary, DataWrapperTruth):
         frame_key = (cam_id, to_datetime(frame.timestamp))
         tree = self.frame_trees[frame_key]
         indices = tree.query_ball_tree(cKDTree(xy_cols), radius)
-        for i, idx in enumerate(indices):
-            if len(idx) == 0:
+        for frame_detection_idx, xy_col_idxs in enumerate(indices):
+            if len(xy_col_idxs) == 0:
                 continue
-            elif len(idx) == 1:
-                truth_id = frame_truth_ids[idx[0]]
-                detection = self.frame_detections[frame_key][i]
+            elif len(xy_col_idxs) == 1:
+                truth_id = frame_truth_ids[xy_col_idxs[0]]
+                detection = self.frame_detections[frame_key][frame_detection_idx]
                 assert TRUTHKEY not in detection.meta.keys(), \
                     "Do not assign {} twice.".format(TRUTHKEY)
                 detection.meta[TRUTHKEY] = truth_id
@@ -262,7 +262,7 @@ class DataWrapperTruthBinary(DataWrapperBinary, DataWrapperTruth):
                 self.cam_tracks[cam_id][truth_id].timestamps.append(detection.timestamp)
                 self.cam_tracks[cam_id][truth_id].meta[DETKEY].append(detection)
                 self.cam_tracks[cam_id][truth_id].meta[FRAMEIDXKEY].append(frame.frameIdx)
-            elif len(idx) > 1:
+            elif len(xy_col_idxs) > 1:
                 raise UserWarning('Truth Data has detections in each others radius.')
             else:  # pragma: no cover
                 Exception()
@@ -274,6 +274,7 @@ class DataWrapperTruthBinary(DataWrapperBinary, DataWrapperTruth):
             if len(track.ids) == 0:
                 del_ids.append(tid)
                 continue
+            # sort all iterables together with timestamps as base
             tstamps, ids, dets, frame_idx = zip(*sorted(zip(track.timestamps, track.ids,
                                                             track.meta[DETKEY],
                                                             track.meta[FRAMEIDXKEY])))
@@ -289,6 +290,7 @@ class DataWrapperTruthBinary(DataWrapperBinary, DataWrapperTruth):
                 if len(track.ids) == 0:
                     del_ids.append((cam_id, tid))
                     continue
+                # sort all iterables together with timestamps as base
                 tstamps, ids, dets, frame_idx = zip(*sorted(zip(track.timestamps, track.ids,
                                                                 track.meta[DETKEY],
                                                                 track.meta[FRAMEIDXKEY])))

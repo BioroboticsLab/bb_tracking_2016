@@ -15,6 +15,9 @@ from ..data.constants import DETKEY
 
 class SimpleWalker(object):
     """Class for walking through the beesbook data.
+
+    Todo:
+        Allow to set prefix for track ids to maintain unique ids over several instances of walker.
     """
     data = None
     """:obj:`.DataWrapper`: the `DataWrapper` object to access detections"""
@@ -33,9 +36,14 @@ class SimpleWalker(object):
     min_track_start_length = 1
     """int: minimum length of track to start a new track as base of a path.
     Only relevant when assigning :obj:`.Track` to other :obj:`Track` objects."""
+    assigned_tracks = None
+    """(:obj:`set`): keeps track of all the tracks that are already assigned"""
 
     def __init__(self, data_wrapper, score_fun, frame_diff, radius):
         """Initialization of a simple Walker to calculate tracks.
+
+        This Walker will run through the data time step for time step, no jumps or sliding windows,
+        hence the naming.
 
         The Walker could be used multiple times but will share the `track_id_count` to
         generate unique :obj:`.Track` ids.
@@ -45,7 +53,6 @@ class SimpleWalker(object):
             score_fun (func): scoring function to calculate the weights between two frame objects
             frame_diff (int): after n frames a close track if no matching object is found
             radius (int): radius in image coordinates to restrict neighborhood search
-            assigned_tracks (:obj:`set`): keeps track of all the tracks that are already assigned
         """
         self.data = data_wrapper
         self.score_fun = score_fun
@@ -159,7 +166,7 @@ class SimpleWalker(object):
         """Initializes the waiting list with Tracks.
 
         Arguments:
-            waiting (list of :obj:`.Track`): the waiting list with tracks to be extended or closed
+            time_idx (int): current time index in `timestamps`
             frame_objects (list of :obj:`.Detection` or :obj:`.Track`): the frame objects associated
                 with the current frame
             waiting (list of :obj:`.Track`): the waiting list with tracks to be extended or closed
@@ -245,8 +252,9 @@ class SimpleWalker(object):
             if isinstance(frame_object, Detection):
                 track.ids.append(frame_object.id)
                 track.timestamps.append(timestamp)
-                track.meta['detections'].append(frame_object)
+                track.meta[DETKEY].append(frame_object)
             elif isinstance(frame_object, Track):
+                # count offset because a track has a length and we won't see it again for some time
                 waiting[waiting_idx][0] = time_idx + len(frame_object.ids)
                 track.ids.extend(frame_object.ids)
                 track.timestamps.extend(frame_object.timestamps)

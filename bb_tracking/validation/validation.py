@@ -191,8 +191,8 @@ class Validator(object):
         timestamps = to_timeformat(timestamps)
         timestamps_test = to_timeformat(track_test.timestamps)
         timestamps_truth = to_timeformat(track_truth.timestamps)
-        assert timestamps_test[0] >= timestamps[0]
-        assert timestamps_test[-1] <= timestamps[-1]
+        assert timestamps_test[0] >= timestamps[0], "Track is out of scope for ground truth data."
+        assert timestamps_test[-1] <= timestamps[-1], "Track is out of scope for ground truth data."
 
         # calculate start and end positions for truth track with gaps
         gap_l_offset = gap + 1 if gap_l else 0

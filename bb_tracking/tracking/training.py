@@ -90,8 +90,8 @@ def train_bin_clf(clf, dw_truth, features, frame_diff, radius, **kwargs):
         for track_path, frame_object_test in zip(tracks_path, frame_objects_test):
             truth_path = dw_truth.get_truthid(track_path)
             truth_test = dw_truth.get_truthid(frame_object_test)
-            if truth_path is None and truth_path == truth_test:  # pragma: no cover
-                # avoid accidentally learning from False Positives
+            if truth_path is None and truth_test is None:  # pragma: no cover
+                # avoid accidentally learning from False Positive Tracks
                 weights.append(np.inf)
                 learning_target.append(-1)
             elif truth_path == truth_test:

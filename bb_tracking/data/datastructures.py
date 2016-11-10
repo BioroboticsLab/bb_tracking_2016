@@ -53,6 +53,12 @@ if PY3:
     Score.__doc__ = """
 A :obj:`Score` defines how similar two :obj:`Track` objects are.
 
+Example:
+    When scoring :obj:`Track` objects like
+    ``Track(id=1, ids=['A', 'A', 'B', 'B', 'C', 'C'], timestamps=(...), meta={})`` a :obj:`Score`
+    would look like:
+    ``Score(value=0.33, track_id=1, truth_id='A', metrics=ScoreMetrics(), alternatives=['B', 'C'])``
+
 Attributes:
     value (float): The scoring value calculated via a scoring function using the :obj:`ScoreMetrics`
     track_id (int or str): :obj:`Track` id we are scoring
@@ -69,6 +75,33 @@ if PY3:
     ScoreMetrics.__doc__ = """
 A :obj:`ScoreMetrics` provides metrics to determine how similar two :obj:`Track` objects are.
 
+Example:
+    Assuming ``gap = 2``
+
+    ===========  ==========  ===================
+    Truth Track  Test Track  Metric
+    ===========  ==========  ===================
+    _            _           Gap Match
+                             (gap_left = True)
+    _            _           Gap Match
+    A            A           Match
+    _            _           Gap Match
+    A            B           Mismatch
+    _            B           Insert
+    A            A           Match
+    A            _           Delete
+    _            _           Gap Match
+    A            _           Delete
+                             (gap_right = False)
+    ===========  ==========  ===================
+
+    The following `ScoreMetrics` belongs to the track comparison in the table above.::
+
+        ScoreMetrics(track_length=5, truth_track_length=100, adjusted_length=10,
+                     id_matches=2, id_mismatches=1,
+                     inserts=1, deletes=1, gap_matches=4, gap_left=True, gap_right=False)
+
+
 Attributes:
     track_length (int): length of :obj:`Track` **including** gaps
     truth_track_length (int): length of truth track we are matching against
@@ -78,6 +111,6 @@ Attributes:
     inserts (int): basically number of False Positives in the :obj:`Track`
     deletes (int): basically number of False Negatives in the :obj:`Track`
     gap_matches (int): correctly matched gaps
-    gap_left (int): correctly identified gap to the left
-    gap_right (int): correctly identified gap to the right
+    gap_left (bool): correctly identified gap to the left
+    gap_right (bool): correctly identified gap to the right
 """

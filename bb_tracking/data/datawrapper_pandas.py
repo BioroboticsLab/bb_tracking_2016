@@ -1,5 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Provides classes for easy access to detections beyond data formats."""
+"""Provides classes for easy access to detections beyond data formats.
+
+This DataWrapppers are using Pandas as backend. This helps when you are using data from other data
+sources, but the instantiation is a bit more complicated. You basically create a Pandas DataFrame
+and provide a mapping from required default names to the column names in your Pandas DataFrame.
+
+Row lookups in Pandas are also quite expensive so this this classes are quite slow and **not**
+recommended for production.
+
+Note:
+    If not used for experiments in the future they might be removed.
+
+Todo:
+    Refactor detection cache and add cache for frame trees.
+"""
 import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree

@@ -30,4 +30,7 @@ $ pip install -r requirements-dev.txt
 
 ## Documentation and Tutorials
 
-Checkout the documentation and the [Getting Started with bb_tracking](https://github.com/BioroboticsLab/bb_tracking/blob/master/getting-started-with-bb-tracking.ipynb) notebook.
+Check the [documentation](http://bb-tracking.readthedocs.io/en/latest/) and the [Getting Started with bb_tracking](https://github.com/BioroboticsLab/bb_tracking/blob/master/getting-started-with-bb-tracking.ipynb) notebook.
+
+Note that you will need [IPython](https://ipython.org/) and [Jupyter](http://jupyter.org/) for the [Getting Started]((https://github.com/BioroboticsLab/bb_tracking/blob/master/getting-started-with-bb-tracking.ipynb)) notebook.
+They are **not** part of this module and you will have to install them by yourself.

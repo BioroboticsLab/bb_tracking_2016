@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Adding tests to scoring functions."""
 # pylint:disable=protected-access,redefined-outer-name,too-many-arguments,too-many-locals
-from __future__ import print_function
+from __future__ import division, print_function
 from itertools import chain, combinations
 import math
 import random
@@ -9,11 +9,13 @@ import numpy as np
 import pandas as pd
 import pytest
 from scipy.spatial.distance import pdist
+from bb_binary import int_id_to_binary
 from bb_tracking.data import Detection
 from bb_tracking.tracking import score_id_sim, score_id_sim_v, \
     score_id_sim_orientation, score_id_sim_orientation_v,\
     score_id_sim_rotating, score_id_sim_rotating_v,\
-    distance_orientations, distance_positions_v
+    distance_orientations, distance_positions_v,\
+    bit_array_to_int_v
 # load deprecated scoring functions separately
 from bb_tracking.tracking.scoring import score_ids_best_fit, score_ids_best_fit_rotating, \
     score_ids_and_orientation
@@ -357,6 +359,21 @@ def test_distance_positions_v():
             list2.append(make_detection(xpos=xpos2, ypos=ypos2))
         test_dists = distance_positions_v(list1, list2)
         assert np.all(expected_dists == test_dists)
+
+
+def test_bit_array_to_int_v():
+    """Tests the conversion of bit arrays to integers (vectorized)."""
+    expected_ids, detections = [], []
+    for i in range(2**12):
+        expected_ids.append(i)
+        detections.append(make_detection(beeid=int_id_to_binary(i)[::-1] / 2))
+
+    calculated_ids = bit_array_to_int_v(detections)
+    assert len(expected_ids) == len(calculated_ids)
+    assert set(expected_ids) == set(calculated_ids)
+
+    with pytest.raises(AssertionError):
+        bit_array_to_int_v([make_detection(beeid=[1] * 13)])
 
 
 def make_detection(det_id=0, timestamp=0, xpos=0, ypos=0, orientation=0, beeid=None, meta=None):

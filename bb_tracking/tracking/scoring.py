@@ -327,3 +327,25 @@ def distance_positions_v(detections1, detections2):
     arr1 = np.array([(det.x, det.y) for det in detections1])
     arr2 = np.array([(det.x, det.y) for det in detections2])
     return np.linalg.norm(arr1 - arr2, axis=1)
+
+
+def bit_array_to_int_v(detections, threshold=0.5):
+    """Converts the bit frequency distribution of the id to an integer representation.
+
+
+    Note:
+        This method assumes little endianess and a 12 bit representation!
+
+    Arguments:
+        detections (:obj:`list` of :obj:`.Detection`): Iterable with `.Detection`
+
+    Keyword Arguments:
+        threshold (Optional float): `beeId` values >= threshold are interpreted as 1
+
+    Returns:
+        :obj:`list` of int: the decoded ids represented as integer
+    """
+    assert len(detections[0].beeId) == 12, "Only implemented for 12 bit representation."
+    arr = np.packbits(np.array([det.beeId[::-1] for det in detections]) >= threshold, axis=1)
+    arr = arr.astype(np.int16, copy=False)
+    return np.left_shift(arr[:, 0], 4) | np.right_shift(arr[:, 1], 4)

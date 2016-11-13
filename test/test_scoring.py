@@ -14,7 +14,7 @@ from bb_tracking.data import Detection
 from bb_tracking.tracking import score_id_sim, score_id_sim_v, \
     score_id_sim_orientation, score_id_sim_orientation_v,\
     score_id_sim_rotating, score_id_sim_rotating_v,\
-    distance_orientations, distance_positions_v,\
+    distance_orientations, distance_orientations_v, distance_positions_v,\
     bit_array_to_int_v
 # load deprecated scoring functions separately
 from bb_tracking.tracking.scoring import score_ids_best_fit, score_ids_best_fit_rotating, \
@@ -340,6 +340,53 @@ def test_distance_orientations():
     assert distance_orientations(0, math.pi) == 180
     assert distance_orientations(math.pi / 2, math.pi) == 90
     assert distance_orientations(-math.pi / 2, math.pi) == 90
+
+
+def test_distance_orientations_v():
+    """Tests the calculation of the distance between two lists of orientations (vectorized)."""
+    det_0 = make_detection(orientation=0, meta={'meta_orientation': 0})
+    det_pi = make_detection(orientation=math.pi, meta={'meta_orientation': math.pi})
+    det_neg_pi = make_detection(orientation=-math.pi, meta={'meta_orientation': -math.pi})
+    det_half_pi = make_detection(orientation=math.pi / 2, meta={'meta_orientation': math.pi / 2})
+    det_neg_half_pi = make_detection(orientation=-math.pi / 2,
+                                     meta={'meta_orientation': -math.pi / 2})
+    detections1, detections2, expected_results = [], [], []
+
+    # 0, 0
+    detections1.append(det_0)
+    detections2.append(det_0)
+    expected_results.append(0)
+
+    # pi, pi
+    detections1.append(det_pi)
+    detections2.append(det_pi)
+    expected_results.append(0)
+
+    # -pi, pi
+    detections1.append(det_neg_pi)
+    detections2.append(det_pi)
+    expected_results.append(0)
+
+    # 0, pi
+    detections1.append(det_0)
+    detections2.append(det_pi)
+    expected_results.append(math.pi)
+
+    # pi / 2, pi
+    detections1.append(det_half_pi)
+    detections2.append(det_pi)
+    expected_results.append(math.pi / 2)
+
+    # -pi / 2, pi
+    detections1.append(det_neg_half_pi)
+    detections2.append(det_pi)
+    expected_results.append(math.pi / 2)
+
+    results = distance_orientations_v(detections1, detections2)
+    assert np.all(results == expected_results)
+
+    meta_results = distance_orientations_v(detections1, detections2, meta_key='meta_orientation')
+    assert np.all(meta_results == expected_results)
 
 
 def test_distance_positions_v():

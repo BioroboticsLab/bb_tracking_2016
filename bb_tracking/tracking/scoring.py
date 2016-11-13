@@ -314,6 +314,35 @@ def distance_orientations(rad1, rad2):
     return distance
 
 
+def distance_orientations_v(detections1, detections2, meta_key=None):
+    """Calculates the distances between orientations (vectorized)
+
+    Orientations are expected to be in rad.
+
+    Arguments:
+        detections1 (:obj:`list` of :obj:`.Detection`): Iterable with `.Detection`
+        detections2 (:obj:`list` of :obj:`.Detection`): Iterable with `.Detection`
+
+    Keyword Arguments:
+        meta_key (Optional str): Instead of :attr:`.Detection.orientation` use value from
+            :attr:`.Detection.meta`
+
+    Returns:
+        :obj:`np.array`: distance between orientations of detections line by line in rad
+    """
+    if meta_key is None:
+        arr1 = np.array([det.orientation for det in detections1])
+        arr2 = np.array([det.orientation for det in detections2])
+    else:
+        arr1 = np.array([det.meta[meta_key] for det in detections1])
+        arr2 = np.array([det.meta[meta_key] for det in detections2])
+
+    distance = np.fabs(arr1 - arr2)
+    mask = distance > math.pi
+    distance[mask] = 2 * math.pi - distance[mask]
+    return distance
+
+
 def distance_positions_v(detections1, detections2):
     """Calculates the euclidean distances between the x and y positions (vectorized)
 

@@ -10,10 +10,11 @@ import pandas as pd
 import pytest
 from scipy.spatial.distance import pdist
 from bb_binary import int_id_to_binary
-from bb_tracking.data import Detection
+from bb_tracking.data import Detection, Track
+from bb_tracking.data.constants import DETKEY
 from bb_tracking.tracking import score_id_sim, score_id_sim_v, \
     score_id_sim_orientation, score_id_sim_orientation_v,\
-    score_id_sim_rotating, score_id_sim_rotating_v,\
+    score_id_sim_rotating, score_id_sim_rotating_v, score_id_sim_tracks_median_v,\
     distance_orientations, distance_orientations_v, distance_positions_v,\
     bit_array_to_int_v
 # load deprecated scoring functions separately
@@ -330,6 +331,37 @@ def test_id_sim_orientation_v(id_sim_ids, id_sim_orientations):
                                                  range_bonus_orientation=bonus_r,
                                                  value_bonus_orientation=bonus)
         assert np.all(group.expected.values == test_values)
+
+
+def test_id_sim_tracks_median_v():
+    """Tests the scoring of tracks via id similarities."""
+    # test setup
+    some_detection = make_detection(beeid=[1, 2])
+    empty_track = Track(id=0, ids=[], timestamps=[], meta={DETKEY: []})
+    some_track = Track(id=1, ids=[some_detection.id], timestamps=[some_detection.timestamp],
+                       meta={DETKEY: [some_detection]})
+    with pytest.raises(AssertionError):
+        score_id_sim_tracks_median_v([], [some_track])
+    with pytest.raises(AssertionError):
+        score_id_sim_tracks_median_v([empty_track], [some_track])
+
+    n_bits = 12
+    # test with tracks with only one detection
+    detections = [make_detection(det_id=i, timestamp=i, beeid=[i] * n_bits) for i in range(3)]
+    tracks = [Track(id=det.id, ids=[det.id], timestamps=[det.timestamp],
+                    meta={DETKEY: [det]}) for det in detections]
+    assert list(score_id_sim_tracks_median_v(tracks, tracks)) == [0] * len(tracks)
+
+    assert list(score_id_sim_tracks_median_v([tracks[0]], [tracks[1]])) == [n_bits]
+
+    # tracks with multiple detections
+    track1 = Track(id=1, ids=[1, 2, 3], timestamps=[1, 2, 3], meta={DETKEY: detections})
+    track2 = Track(id=2, ids=[4, 5, 6], timestamps=[1, 2, 3],
+                   meta={DETKEY: [detections[0], detections[1],
+                                  make_detection(beeid=[0.5] * n_bits)]})
+    results = score_id_sim_tracks_median_v([track1, track1, track2], [track1, track2, track2])
+
+    assert list(results) == [0, n_bits / 2, 0]
 
 
 def test_distance_orientations():

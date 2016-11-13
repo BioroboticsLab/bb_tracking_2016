@@ -11,6 +11,7 @@ import math
 import numpy as np
 from scipy.spatial.distance import cityblock, hamming
 from bb_binary import int_id_to_binary
+from bb_tracking.data.constants import DETKEY
 
 
 def score_ids_best_fit(ids1, ids2, length=12):
@@ -296,6 +297,24 @@ def score_id_sim_rotating_v(detections1, detections2, rotation_penalty=0.5):
     return score
 
 
+def score_id_sim_tracks_median_v(tracks1, tracks2):
+    """Compares id frequency distributions of tracks by comparing the median (vectorized)
+
+    Arguments:
+        tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+        tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+    Returns:
+        :obj:`np.array`: Use Manhattan distance :math:`\\sum_i |Median(ids1)_i - Median(ids2)_i|`
+    """
+    assert len(tracks1) == len(tracks2), "Track lists do not have the same length."
+
+    arr1 = calc_median_ids(tracks1)
+    arr2 = calc_median_ids(tracks2)
+    assert np.all(arr1.shape == arr2.shape), "Detections do not have the same length of id bits."
+    return np.sum(np.fabs(arr1 - arr2), axis=1)
+
+
 def distance_orientations(rad1, rad2):
     """Calculates the distance between two orientations.
 
@@ -378,3 +397,28 @@ def bit_array_to_int_v(detections, threshold=0.5):
     arr = np.packbits(np.array([det.beeId[::-1] for det in detections]) >= threshold, axis=1)
     arr = arr.astype(np.int16, copy=False)
     return np.left_shift(arr[:, 0], 4) | np.right_shift(arr[:, 1], 4)
+
+
+def calc_median_ids(tracks):
+    """Helper to calculate the median bit for all the ids in the given track.
+
+    Note:
+        For performance reasons the median id is saved as meta key and only is recalculated
+        if the length of the track changes.
+
+    Arguments:
+        tracks(:obj:`list` of :obj`.Track`): Iterable with Tracks
+
+    Returns:
+        :obj:`np.array`: median for all the bits in the given track
+    """
+    meta_key = 'median_id'
+    ids_median = []
+    for track in tracks:
+        if meta_key in track.meta.keys() and track.meta[meta_key][0] == len(track.ids):
+            ids_median.append(track.meta[meta_key][1])
+        else:
+            track_median = np.median([det.beeId for det in track.meta[DETKEY]], axis=0)
+            ids_median.append(track_median)
+            track.meta[meta_key] = (len(track.ids), track_median)
+    return np.array(ids_median)

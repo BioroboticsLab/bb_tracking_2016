@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Adding tests to validation methods."""
-# pylint:disable=protected-access
+# pylint:disable=protected-access,too-many-branches
 import copy
 import numpy as np
 import pandas as pd
 import pytest
 import six
 from bb_tracking.data import Score, ScoreMetrics, Track
-from bb_tracking.data.constants import FPKEY
+from bb_tracking.data.constants import DETKEY, FPKEY
 from bb_tracking.validation import Validator, validation_score_fun_all, calc_fragments,\
     convert_validated_to_pandas, track_statistics
 
@@ -110,7 +110,8 @@ def test_validate(validator, timestamps, id_translator):
 
     gap = 0
     # test correct assigning of truth id paths
-    scores = validator.validate(tracks, gap, cam_gap=False, val_score_fun=score_fun_1, check=False)
+    scores = validator.validate(tracks, gap, cam_gap=False, val_score_fun=score_fun_1,
+                                val_calc_id_fun=score_fun_1, check=False)
     for track_id, score in scores.items():
         if track_id is 5:
             assert score.alternatives == [4, 5]
@@ -119,10 +120,12 @@ def test_validate(validator, timestamps, id_translator):
         assert score.track_id == track_id
         assert score.truth_id == expected_tracks[track_id]
         assert score.value == 1
+        assert score.calc_id == 1
 
     # test with standard score function resulting in choosing the best truth id path
     track = tracks[4]
-    scores = validator.validate([track], gap, cam_gap=False, check=False)
+    scores = validator.validate([track], gap, cam_gap=False,
+                                val_calc_id_fun=score_fun_1, check=False)
     assert len(scores) == 1
     score = scores[track.id]
     assert score.track_id == track.id
@@ -388,7 +391,8 @@ def test_calc_fragments(data_truth):
 def test_convert_validated():
     """Tests converting the scores dictionary from Validator to a Pandas DataFrame."""
     metric = make_score_metric({"track_length": 5})
-    score = Score(value=1.5, track_id=1, truth_id=2, metrics=metric, alternatives=[1, 2, 3])
+    score = Score(value=1.5, track_id=1, truth_id=2, calc_id=2,
+                  metrics=metric, alternatives=[1, 2, 3])
     scores = {0: score}
     scores_df = convert_validated_to_pandas(scores)
 
@@ -406,6 +410,8 @@ def test_track_statistics(validator, tracks_test, id_translator):
     get_ids = id_translator(validator.truth)
     tracks_clean = [Track(id=track.id, ids=get_ids(*track.ids), timestamps=track.timestamps,
                           meta=track.meta) for track in tracks_test]
+    for track in tracks_clean:
+        track.meta[DETKEY] = validator.truth.get_detections(track.ids)
     gap = 10
 
     # no errors
@@ -419,10 +425,16 @@ def test_track_statistics(validator, tracks_test, id_translator):
     for key, (correct, n_items) in metrics['tracks'].items():
         assert correct == n_items, "{} is wrong".format(key)
 
+    for key, (correct, n_items) in metrics['truth_ids'].items():
+        if "default" in key:
+            correct += 1
+        assert correct == n_items, "{} is wrong".format(key)
+
     # one camera gap
     tracks = copy.deepcopy(tracks_clean)
     del tracks[0].ids[1]
     del tracks[0].timestamps[1]
+    del tracks[0].meta[DETKEY][1]
     scores = validator.validate(tracks, gap)
     metrics = track_statistics(tracks, scores, validator, gap)
     for key, (wrong, n_fragments) in metrics['fragments'].items():
@@ -434,15 +446,22 @@ def test_track_statistics(validator, tracks_test, id_translator):
             correct += 1  # we are missing one detection (separate fragment + track)
         assert correct == n_items, "{} is wrong".format(key)
 
+    for key, (correct, n_items) in metrics['truth_ids'].items():
+        if "default" in key:
+            correct += 1
+        assert correct == n_items, "{} is wrong".format(key)
+
     # test no scoring on gaps
     tracks = copy.deepcopy(tracks_clean)
     tracks.append(Track(id=9, ids=[tracks[0].ids[0]], timestamps=[tracks[0].timestamps[0]],
-                        meta={}))
+                        meta={DETKEY: [validator.truth.get_detection(tracks[0].ids[0])]}))
     # remove the first two items in track 1
     del tracks[0].ids[0]
     del tracks[0].ids[0]
     del tracks[0].timestamps[0]
     del tracks[0].timestamps[0]
+    del tracks[0].meta[DETKEY][0]
+    del tracks[0].meta[DETKEY][0]
     scores = validator.validate(tracks, gap, gap_l=False, gap_r=False, cam_gap=False)
     metrics = track_statistics(tracks, scores, validator, gap, cam_gap=False)
     for key, (wrong, n_fragments) in metrics['fragments'].items():
@@ -454,6 +473,11 @@ def test_track_statistics(validator, tracks_test, id_translator):
             correct += 1  # we removed one detections from track data
         elif key == "tracks_complete":
             correct += 1  # track 1 is not complete
+        assert correct == n_items, "{} is wrong".format(key)
+
+    for key, (correct, n_items) in metrics['truth_ids'].items():
+        if "default" in key:
+            correct += 1
         assert correct == n_items, "{} is wrong".format(key)
 
 

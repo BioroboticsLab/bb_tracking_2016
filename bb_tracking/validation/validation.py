@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from ..data import DataWrapperPandas, DataWrapperTracks, Score, ScoreMetrics
 from ..data.constants import CAMKEY, FPKEY, FRAMEIDXKEY
+from ..tracking import calc_track_ids, bit_array_to_int_v
 
 
 class Validator(object):
@@ -105,7 +106,7 @@ class Validator(object):
                 assigned_ids & false_positives, positives - assigned_ids)
 
     def validate(self, tracks, gap, gap_l=True, gap_r=True, cam_gap=True, val_score_fun=None,
-                 check=True):
+                 val_calc_id_fun=None, check=True):
         """Validates the given :obj:`.Track` with truth data.
 
         The default `score_fun` is :func:`validation_score_fun_all()`.
@@ -128,8 +129,14 @@ class Validator(object):
             and mapping `{id => score}`
         """
         assert gap >= 0
+
+        def default_calc_id_fun(track):
+            """Default implementation to calculate the id of a :obj:`.Track` object."""
+            return calc_track_ids([track])[0]
         if val_score_fun is None:
             val_score_fun = validation_score_fun_all
+        if val_calc_id_fun is None:
+            val_calc_id_fun = default_calc_id_fun
 
         # just make sure everything is all right
         if check:
@@ -155,6 +162,7 @@ class Validator(object):
                         value=score_value,
                         track_id=track.id,
                         truth_id=truth_id,
+                        calc_id=val_calc_id_fun(track),
                         metrics=metrics,
                         alternatives=[])
                 elif (track.id in scores.keys() and
@@ -253,6 +261,9 @@ class Validator(object):
 
 def validation_score_fun_all(metrics, gap=0):
     """Scoring function that considers all ids and gaps and calculates the percentage of matches.
+
+    Note:
+        Used as default implementation to calculate :attr:`.Score.value`.
 
     Arguments:
         metrics (:obj:`.ScoreMetrics`): :obj:`.ScoreMetrics` to calculate accumulated score
@@ -391,6 +402,31 @@ def track_statistics(tracks, scores, validator, gap, cam_gap=True):
     if scores.shape[0] > track_no_gaps_c and np.all(scores.gap_left) and np.all(scores.gap_right):
         fragment_c = scores.shape[0]
 
+    # calculate how many truth fragments do have converging ids
+    truth_calc_ids, truth_ids, truth_lengths = [], [], []
+    if cam_gap:
+        truth_tracks = []
+        for cam_id in truth.get_camids():
+            truth_tracks.extend([track for track in truth.get_truth_tracks(cam_id=cam_id)
+                                 if track.id != truth.fp_id])
+    else:
+        truth_tracks = [track for track in truth.get_truth_tracks() if track.id != truth.fp_id]
+
+        truth_calc_ids.extend(list(calc_track_ids(truth_tracks)))
+        truth_ids.extend([track.id for track in truth_tracks])
+        truth_lengths.extend([len(track.ids) for track in truth_tracks])
+    truth_calc_ids = np.array(truth_calc_ids)
+    truth_ids = np.array(truth_ids)
+    truth_lengths = np.array(truth_lengths)
+    matching_ids = scores.truth_id == scores.calc_id
+    matching_ids_truth = truth_ids == truth_calc_ids
+
+    # calculate how many detections have the correct id from start
+    truth_positives, _ = truth.get_all_detection_ids()
+    detections = truth.get_detections(truth_positives)
+    detection_truth_ids = np.array([truth.get_truthid(det) for det in detections])
+    detection_ids = bit_array_to_int_v(detections)
+
     metrics_dict = {
         "detections": {
             "detections_id_mismatches": (np.sum(scores.id_mismatches), n_track_detections),
@@ -421,6 +457,17 @@ def track_statistics(tracks, scores, validator, gap, cam_gap=True):
             "true_negatives": len(negatives),
             "false_positives": len(f_positives),
             "false_negatives": len(f_negatives),
+        },
+        "truth_ids": {
+            "detections_correct_default": (np.sum(detection_ids == detection_truth_ids),
+                                           len(detection_ids)),
+            "detections_correct_truth": (np.sum(truth_lengths[matching_ids_truth]),
+                                         np.sum(truth_lengths)),
+            "detections_correct_tracking": (np.sum(scores[matching_ids].id_matches +
+                                                   scores[matching_ids].id_mismatches),
+                                            np.sum(scores.id_matches + scores.id_mismatches)),
+            "fragments_correct_truth": (np.sum(matching_ids_truth), len(truth_ids)),
+            "fragments_correct_tracking": (np.sum(matching_ids), scores.shape[0]),
         },
     }
     return metrics_dict

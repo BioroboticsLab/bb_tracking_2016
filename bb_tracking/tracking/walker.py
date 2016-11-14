@@ -14,11 +14,7 @@ from ..data.constants import DETKEY
 
 
 class SimpleWalker(object):
-    """Class for walking through the beesbook data.
-
-    Todo:
-        Allow to set prefix for track ids to maintain unique ids over several instances of walker.
-    """
+    """Class for walking through the beesbook data."""
     data = None
     """:obj:`.DataWrapper`: the `DataWrapper` object to access detections"""
     score_fun = None
@@ -38,8 +34,10 @@ class SimpleWalker(object):
     Only relevant when assigning :obj:`.Track` to other :obj:`Track` objects."""
     assigned_tracks = None
     """(:obj:`set`): keeps track of all the tracks that are already assigned"""
+    track_prefix = None
+    """str: prefix for :attr:`.Track.id` for unique track ids over several instances"""
 
-    def __init__(self, data_wrapper, score_fun, frame_diff, radius):
+    def __init__(self, data_wrapper, score_fun, frame_diff, radius, track_prefix=None):
         """Initialization of a simple Walker to calculate tracks.
 
         This Walker will run through the data time step for time step, no jumps or sliding windows,
@@ -53,11 +51,15 @@ class SimpleWalker(object):
             score_fun (func): scoring function to calculate the weights between two frame objects
             frame_diff (int): after n frames a close track if no matching object is found
             radius (int): radius in image coordinates to restrict neighborhood search
+
+        Keyword Argument:
+            track_prefix (Optional str): prefix for :attr:`.Track.id` for unique track ids
         """
         self.data = data_wrapper
         self.score_fun = score_fun
         self.frame_diff = frame_diff
         self.radius = radius
+        self.track_prefix = track_prefix
         self.assigned_tracks = set()
 
     def calc_tracks(self, start=None, stop=None):
@@ -179,7 +181,11 @@ class SimpleWalker(object):
         object_type = type(frame_objects[0])
         if object_type is Detection:
             for frame_object in frame_objects:
-                waiting.append([time_idx, Track(id=self.track_id_count,
+                if self.track_prefix is None:
+                    track_id = self.track_id_count
+                else:
+                    track_id = "".join([self.track_prefix, str(self.track_id_count)])
+                waiting.append([time_idx, Track(id=track_id,
                                                 ids=[frame_object.id],
                                                 timestamps=[frame_object.timestamp],
                                                 meta={DETKEY: [frame_object, ]})])
@@ -187,8 +193,12 @@ class SimpleWalker(object):
         elif object_type is Track:
             for frame_object in frame_objects:
                 if len(frame_object.ids) >= self.min_track_start_length:
+                    if self.track_prefix is None:
+                        track_id = self.track_id_count
+                    else:
+                        track_id = "".join([self.track_prefix, str(self.track_id_count)])
                     track = copy.deepcopy(frame_object)
-                    waiting.append([time_idx, track._replace(id=self.track_id_count)])
+                    waiting.append([time_idx, track._replace(id=track_id)])
                     self.track_id_count += 1
         else:
             raise TypeError("Type {0} not supported.".format(object_type))

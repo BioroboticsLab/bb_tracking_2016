@@ -4,6 +4,7 @@
 import copy
 import numpy as np
 import pytest
+import six
 from scipy.spatial.distance import euclidean
 from bb_binary import binary_id_to_int
 from bb_tracking.data import Track
@@ -58,6 +59,13 @@ def test_calc_initialize(simple_walker, frame_objects_data):
 
     # test that all frame_objects have started a new track
     assert set([det.id for det in frame_objects]) == ids
+
+    # test with track prefix
+    simple_walker.track_prefix = "test_"
+    new_waiting = simple_walker._calc_initialize(time_index, frame_objects, [])
+    for _, track in new_waiting:
+        assert isinstance(track.id, six.string_types)
+        assert "test_" in track.id
 
     # test other types
     with pytest.raises(TypeError) as excinfo:

@@ -62,7 +62,7 @@ def validate_plot(tracks, scores, validator, gap=0, cam_gap=True, metric_keys=No
         axs.text(value + 0.05, rect.get_y(), text, ha='center', va='bottom')
 
     plt.yticks(range(len(keys)), keys)
-    plt.ylim(-0.5, len(keys)-0.5)
+    plt.ylim(-0.5, len(keys) - 0.5)
     plt.xlim(0, 1.12)
 
     axs.set_xticks(np.arange(0.0, 1.1, 0.1))

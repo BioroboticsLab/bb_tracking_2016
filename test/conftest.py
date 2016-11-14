@@ -16,7 +16,7 @@ Todo:
     helper functions into separate files.
 """
 # pylint:disable=no-member,redefined-outer-name,too-many-arguments,too-many-locals
-from __future__ import print_function
+from __future__ import division, print_function
 from fractions import Fraction
 import inspect
 import math
@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import pytz
-from bb_binary import build_frame_container_from_df, Repository, int_id_to_binary
+from bb_binary import build_frame_container_from_df, Repository, int_id_to_binary, binary_id_to_int
 from bb_tracking.data import Detection, Track, DataWrapperPandas, DataWrapperTruthPandas, \
     DataWrapperBinary, DataWrapperTruthBinary, DataWrapperTracks, DataWrapperTruthTracks
 from bb_tracking.data.constants import CAMKEY, DETKEY, TRUTHKEY
@@ -96,27 +96,6 @@ def cmp_tracks(track1, track2, cmp_trackid=True):
         assert track_timestamps_equal
     else:
         assert all(track_timestamps_equal)
-
-
-def binarray2int(bit_array):
-    """Calculates integer from bit_array.
-
-    Arguments:
-        bit_array (:obj:`np.array`): integer represented as an array of bits
-
-    Returns:
-        int: integer representation of bit array
-
-    Example:
-        >>> binarray2int([0, 1, 1])
-        3
-
-    Todo:
-        We expect *bb_binary* to support this functionality.
-        See `Issue #7 <https://github.com/BioroboticsLab/bb_binary/issues/7>`_.
-        Replace this helper once this is true.
-    """
-    return sum([m * 2**n for (n, m) in enumerate(bit_array[::-1])])
 
 
 @pytest.fixture()
@@ -325,19 +304,19 @@ def detections_test(timestamps):
     """Fixture for detections in {key: namedtuple} format."""
     detections_test = {
         'f1d0c0': Detection(1, timestamps[0], 1, 1, 2.69913,
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1. / 3, 2. / 3],
+                            [2 / 3, 1 / 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                             {TRUTHKEY: 1, CAMKEY: 0}),
         'f2d0c2': Detection(2, timestamps[1], 2, 2, -0.314444,
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], {TRUTHKEY: 1, CAMKEY: 2}),
+                            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], {TRUTHKEY: 1, CAMKEY: 2}),
         'f3d0c0': Detection(3, timestamps[2], 3, 3, 0.516632,
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1. / 3, 2. / 3],
+                            [2 / 3, 1 / 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                             {TRUTHKEY: 1, CAMKEY: 0}),
         'f1d1c0': Detection(4, timestamps[0], 4, 4, 2.27196,
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], {TRUTHKEY: 2, CAMKEY: 0}),
+                            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], {TRUTHKEY: 2, CAMKEY: 0}),
         'f1d2c0': Detection(5, timestamps[0], 5, 5, 0,
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], {TRUTHKEY: 3, CAMKEY: 0}),
+                            [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], {TRUTHKEY: 3, CAMKEY: 0}),
         'f3d1c0': Detection(6, timestamps[2], 6, 6, 0.56614,
-                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], {TRUTHKEY: 4, CAMKEY: 0})
+                            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], {TRUTHKEY: 4, CAMKEY: 0})
     }
     return detections_test
 
@@ -437,7 +416,7 @@ def detections_simple_tracking(tracking_generation_seed):
                             meta={DETKEY: []})
         for j in range(track_length):
             detection = Detection(id=detection_id, timestamp=timestamps[j],
-                                  orientation=zrotation, beeId=list(int_id_to_binary(bee_id)),
+                                  orientation=zrotation, beeId=list(int_id_to_binary(bee_id))[::-1],
                                   x=xpos, y=ypos, meta={})
             detections_dict["id"].append(detection.id)
             detections_dict["timestamp"].append(detection.timestamp)
@@ -466,7 +445,8 @@ def data_simple_tracking(detections_simple_tracking):
     """Fixture for DataWrapperTruth with basic tracking testing."""
     detections = detections_simple_tracking[0]
     detections_truth = detections.copy()
-    detections_truth["decodedId"] = [binarray2int(bee_id) for bee_id in detections_truth["beeID"]]
+    detections_truth["decodedId"] = [binary_id_to_int(bee_id, endian='little')
+                                     for bee_id in detections_truth["beeID"]]
     detections_truth["readability"] = DataWrapperTruthPandas.code_unknown
     return DataWrapperTruthPandas(detections, detections_truth, 1, meta_keys={'camID': CAMKEY})
 

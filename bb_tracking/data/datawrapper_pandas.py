@@ -435,10 +435,11 @@ class DataWrapperTruthPandas(DataWrapperPandas, DataWrapperTruth):
         detections = self.detections[restrictions].sort_values('timestamp')
         if detections.shape[0] == 0:
             return None
+        detection_ids = detections[self.cols['id']].tolist()
         return Track(truth_id,
-                     detections[self.cols['id']].tolist(),
+                     detection_ids,
                      pd.to_datetime(detections[self.cols['timestamp']]).tolist(),
-                     meta={})
+                     meta={DETKEY: self.get_detections(detection_ids)})
 
     def get_truth_tracks(self, cam_id=None):
         if cam_id is None:

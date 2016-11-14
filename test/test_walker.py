@@ -5,9 +5,9 @@ import copy
 import numpy as np
 import pytest
 from scipy.spatial.distance import euclidean
+from bb_binary import binary_id_to_int
 from bb_tracking.data import Track
 from bb_tracking.data.constants import CAMKEY, DETKEY
-from test.conftest import binarray2int
 
 
 def test_init_simple_walker(simple_walker, data_simple_tracking):
@@ -155,7 +155,7 @@ def test_calc_make_claims(simple_walker, detections_simple_tracking, object_type
         if track.id == -1:
             neighbors = None
         else:
-            truth_id = binarray2int(track.meta[DETKEY][0].beeId)
+            truth_id = binary_id_to_int(track.meta[DETKEY][0].beeId, endian='little')
             neighbors = simple_walker.data.get_neighbors(track.meta[DETKEY][-1], cam_id,
                                                          radius=simple_walker.radius,
                                                          timestamp=timestamps[tidx])
@@ -209,7 +209,7 @@ def test_calc_assign(simple_walker, detections_simple_tracking, object_type):
     waiting_expected = copy.deepcopy(waiting)
 
     for waiting_idx, (_, track) in enumerate(waiting_expected):
-        truth_id = binarray2int(track.meta[DETKEY][0].beeId)
+        truth_id = binary_id_to_int(track.meta[DETKEY][0].beeId, endian='little')
         truth_track = truth_tracks[truth_id]
         timestamp = truth_track.timestamps[time_idx]
         detection = truth_track.meta[DETKEY][time_idx]

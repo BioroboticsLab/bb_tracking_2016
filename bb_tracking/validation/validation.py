@@ -412,12 +412,10 @@ def track_statistics(tracks, scores, validator, gap, cam_gap=True):
     else:
         truth_tracks = [track for track in truth.get_truth_tracks() if track.id != truth.fp_id]
 
-        truth_calc_ids.extend(list(calc_track_ids(truth_tracks)))
-        truth_ids.extend([track.id for track in truth_tracks])
-        truth_lengths.extend([len(track.ids) for track in truth_tracks])
-    truth_calc_ids = np.array(truth_calc_ids)
-    truth_ids = np.array(truth_ids)
-    truth_lengths = np.array(truth_lengths)
+    truth_calc_ids = calc_track_ids(truth_tracks)
+    truth_ids = np.array([track.id for track in truth_tracks])
+    truth_lengths = np.array([len(track.ids) for track in truth_tracks])
+
     matching_ids = scores.truth_id == scores.calc_id
     matching_ids_truth = truth_ids == truth_calc_ids
 

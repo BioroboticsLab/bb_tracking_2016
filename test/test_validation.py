@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Adding tests to validation methods."""
-# pylint:disable=protected-access,too-many-branches
+# pylint:disable=protected-access,too-many-branches,too-many-statements
 import copy
 import numpy as np
 import pandas as pd
@@ -423,11 +423,13 @@ def test_track_statistics(validator, tracks_test, id_translator):
         assert n_fragments == 5, "{} is wrong".format(key)
 
     for key, (correct, n_items) in metrics['tracks'].items():
+        assert correct > 0, "{} is wrong".format(key)
         assert correct == n_items, "{} is wrong".format(key)
 
     for key, (correct, n_items) in metrics['truth_ids'].items():
         if "default" in key:
             correct += 1
+        assert correct > 0, "{} is wrong".format(key)
         assert correct == n_items, "{} is wrong".format(key)
 
     # one camera gap
@@ -444,11 +446,13 @@ def test_track_statistics(validator, tracks_test, id_translator):
     for key, (correct, n_items) in metrics['tracks'].items():
         if key != "tracks_in_scope":
             correct += 1  # we are missing one detection (separate fragment + track)
+        assert correct > 0, "{} is wrong".format(key)
         assert correct == n_items, "{} is wrong".format(key)
 
     for key, (correct, n_items) in metrics['truth_ids'].items():
-        if "default" in key:
+        if "default" in key or "truth" in key:
             correct += 1
+        assert correct > 0, "{} is wrong".format(key)
         assert correct == n_items, "{} is wrong".format(key)
 
     # test no scoring on gaps
@@ -473,11 +477,13 @@ def test_track_statistics(validator, tracks_test, id_translator):
             correct += 1  # we removed one detections from track data
         elif key == "tracks_complete":
             correct += 1  # track 1 is not complete
+        assert correct > 0, "{} is wrong".format(key)
         assert correct == n_items, "{} is wrong".format(key)
 
     for key, (correct, n_items) in metrics['truth_ids'].items():
         if "default" in key:
             correct += 1
+        assert correct > 0, "{} is wrong".format(key)
         assert correct == n_items, "{} is wrong".format(key)
 
 

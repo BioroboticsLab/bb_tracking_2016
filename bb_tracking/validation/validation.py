@@ -457,15 +457,15 @@ def track_statistics(tracks, scores, validator, gap, cam_gap=True):
             "false_negatives": len(f_negatives),
         },
         "truth_ids": {
-            "detections_correct_default": (np.sum(detection_ids == detection_truth_ids),
-                                           len(detection_ids)),
-            "detections_correct_truth": (np.sum(truth_lengths[matching_ids_truth]),
-                                         np.sum(truth_lengths)),
-            "detections_correct_tracking": (np.sum(scores[matching_ids].id_matches +
-                                                   scores[matching_ids].id_mismatches),
-                                            np.sum(scores.id_matches + scores.id_mismatches)),
-            "fragments_correct_truth": (np.sum(matching_ids_truth), len(truth_ids)),
-            "fragments_correct_tracking": (np.sum(matching_ids), scores.shape[0]),
+            "detection_ids_correct_default": (np.sum(detection_ids == detection_truth_ids),
+                                              len(detection_ids)),
+            "detection_ids_correct_truth": (np.sum(truth_lengths[matching_ids_truth]),
+                                            np.sum(truth_lengths)),
+            "detection_ids_correct_tracking": (np.sum(scores[matching_ids].id_matches +
+                                                      scores[matching_ids].id_mismatches),
+                                               np.sum(scores.id_matches + scores.id_mismatches)),
+            "fragment_ids_correct_tracking": (np.sum(matching_ids), scores.shape[0]),
+            "track_ids_correct_truth": (np.sum(matching_ids_truth), len(truth_ids)),
         },
     }
     return metrics_dict

@@ -26,7 +26,11 @@ def validate_plot(tracks, scores, validator, gap=0, cam_gap=True, metric_keys=No
         gap (int): the gap the algorithm should be capable to overcome
         cam_gap (bool): flag indicating that a camera switch is a insurmountable gap
         metric_keys (list): Iterable with metric keys that should be shown.
+<<<<<<< HEAD
             Default is ``['detections', 'fragments', 'tracks']``.
+=======
+            Default is ``['detections', 'fragments' 'tracks', 'truth_ids']``.
+>>>>>>> 7b6f08c50dd64fdf0248e0472874ef113bf30acf
 
     Returns:
         tuple: tuple containing figure and axes object from matplotlib
@@ -37,11 +41,14 @@ def validate_plot(tracks, scores, validator, gap=0, cam_gap=True, metric_keys=No
         tracks = validator.remove_false_positives(tracks)
     assert len(tracks) == scores.shape[0], "You might have false positives in tracks."
     bar_dict = track_statistics(tracks, scores, validator, gap=gap, cam_gap=cam_gap)
-    col_dict = {"detections": "orange", "fragments": "red", "tracks": "green"}
+    col_dict = {"detections": "orange",
+                "fragments": "red",
+                "tracks": "green",
+                "truth_ids": "limegreen"}
 
     fig, axs = plt.subplots()
     colors, keys, values = [], [], {}
-    metric_keys = metric_keys or ("detections", "fragments", "tracks")
+    metric_keys = metric_keys or ("detections", "fragments", "tracks", "truth_ids")
     for key in metric_keys:
         metrics = bar_dict[key]
         colors.extend([col_dict[key], ] * len(metrics))
@@ -56,9 +63,11 @@ def validate_plot(tracks, scores, validator, gap=0, cam_gap=True, metric_keys=No
     for i, rect in enumerate(axs.patches):
         value = rect.get_width()
         text = "{:10.2f}% ({})".format(value * 100, values[keys[i]][0])
-        axs.text(value + 0.035, rect.get_y(), text, ha='center', va='bottom')
+        axs.text(value + 0.05, rect.get_y(), text, ha='center', va='bottom')
 
     plt.yticks(range(len(keys)), keys)
+    plt.ylim(-0.5, len(keys) - 0.5)
+    plt.xlim(0, 1.12)
 
     axs.set_xticks(np.arange(0.0, 1.1, 0.1))
     minor_locator = AutoMinorLocator(2)
@@ -90,13 +99,16 @@ def plot_fragments(scores, validator, gap, cam_gap=True, interval=5, max_x=None)
     if isinstance(scores, dict):
         scores = convert_validated_to_pandas(scores)
     _, _, _, fragment_lengths = calc_fragments(validator.truth, gap=gap, cam_gap=cam_gap)
-    wrong = scores[scores.value < 1]
+    error = scores[scores.value < 1]
+    wrong_id = scores[scores.truth_id != scores.calc_id]
+    lengths = [fragment_lengths, scores.track_length, wrong_id.track_length, error.track_length]
     bins = np.arange(0, max(max(fragment_lengths), scores.track_length.max()) + 1, interval)
     max_x = max_x or max(bins)
-    labels = ["Truth", "Test", "Wrong"]
+    labels = ["Truth", "Test", "Wrong Id", "Tracking Errors"]
+    colors = ["green", "blue", "red", "darkorange"]
     fig, (ax1, ax2) = plt.subplots(2, sharex=True)
-    ax1.hist([fragment_lengths, scores.track_length, wrong.track_length],
-             bins=bins, normed=True, cumulative=True, histtype='step', label=labels)
+    ax1.hist(lengths, bins=bins, normed=True, cumulative=True, histtype='step',
+             label=labels, color=colors)
 
     ax1.set_ylim([0, 1])
     ax1.set_yticks(np.arange(0, 1 + 0.1, 0.1))
@@ -104,7 +116,7 @@ def plot_fragments(scores, validator, gap, cam_gap=True, interval=5, max_x=None)
     ax1.legend(loc='lower right')
     ax1.set_ylabel("Frequency")
 
-    ax2.hist([fragment_lengths, scores.track_length, wrong.track_length], bins=bins, label=labels)
+    ax2.hist(lengths, bins=bins, label=labels, color=colors)
     ax2.grid(True)
     ax2.set_ylabel("Number")
 

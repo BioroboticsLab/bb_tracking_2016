@@ -15,11 +15,12 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
+from bb_binary import binary_id_to_int
 from bb_tracking.data import DataWrapperTruthTracks, Track
 from bb_tracking.data.constants import DETKEY
 from bb_tracking.tracking import distance_positions_v, make_detection_score_fun, \
     train_bin_clf, make_track_score_fun
-from test.conftest import binarray2int, cmp_tracks, generate_random_walker
+from test.conftest import cmp_tracks, generate_random_walker
 
 
 @pytest.mark.slow
@@ -109,7 +110,7 @@ def cmp_tracks_helper(truth_tracks, test_tracks):
         test_tracks (iterable): iterable with ``Track``s to test.
     """
     for test_track in test_tracks:
-        truth_id = binarray2int(test_track.meta[DETKEY][0].beeId)
+        truth_id = binary_id_to_int(test_track.meta[DETKEY][0].beeId, endian='little')
         cmp_tracks(test_track, truth_tracks[truth_id], cmp_trackid=False)
     # test length after content to have more detailed information on Problem
     assert len(truth_tracks) == len(test_tracks)

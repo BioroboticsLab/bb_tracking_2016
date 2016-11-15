@@ -11,6 +11,7 @@ import math
 import numpy as np
 from scipy.spatial.distance import cityblock, hamming
 from bb_binary import int_id_to_binary
+from bb_tracking.data import Detection
 from bb_tracking.data.constants import DETKEY
 
 
@@ -377,24 +378,29 @@ def distance_positions_v(detections1, detections2):
     return np.linalg.norm(arr1 - arr2, axis=1)
 
 
-def bit_array_to_int_v(detections, threshold=0.5):
+def bit_array_to_int_v(bit_arrays, threshold=0.5, endian='little'):
     """Converts the bit frequency distribution of the id to an integer representation.
 
-
     Note:
-        This method assumes little endianess and a 12 bit representation!
+        Instead of bit_arrays you could also pass lists with :obj:`.Detection` objects.
+        In this case the :attr:`.Detection.beeId` is used and interpreted as bit array.
 
     Arguments:
-        detections (:obj:`list` of :obj:`.Detection`): Iterable with `.Detection`
+        bit_arrays (:obj:`list` of arrays or :obj:`.Detection`): Iterable with ids to decode.
 
     Keyword Arguments:
-        threshold (Optional float): `beeId` values >= threshold are interpreted as 1
+        threshold (Optional float): ``values >= threshold`` are interpreted as 1
+        endian (Optional str): Either `little` for little endianess or `big` for big endianess.
 
     Returns:
         :obj:`list` of int: the decoded ids represented as integer
     """
-    assert len(detections[0].beeId) == 12, "Only implemented for 12 bit representation."
-    arr = np.packbits(np.array([det.beeId[::-1] for det in detections]) >= threshold, axis=1)
+    if isinstance(bit_arrays[0], Detection):
+        bit_arrays = [det.beeId for det in bit_arrays]
+    if endian == 'little':
+        bit_arrays = [arr[::-1] for arr in bit_arrays]
+    assert len(bit_arrays[0]) == 12, "Only implemented for 12 bit representation."
+    arr = np.packbits(np.array(bit_arrays) >= threshold, axis=1)
     arr = arr.astype(np.int16, copy=False)
     return np.left_shift(arr[:, 0], 4) | np.right_shift(arr[:, 1], 4)
 
@@ -407,7 +413,7 @@ def calc_median_ids(tracks):
         if the length of the track changes.
 
     Arguments:
-        tracks(:obj:`list` of :obj`.Track`): Iterable with Tracks
+        tracks(:obj:`list` of :obj:`.Track`): Iterable with Tracks
 
     Returns:
         :obj:`np.array`: median for all the bits in the given track
@@ -422,3 +428,22 @@ def calc_median_ids(tracks):
             ids_median.append(track_median)
             track.meta[meta_key] = (len(track.ids), track_median)
     return np.array(ids_median)
+
+
+def calc_track_ids(tracks):
+    """Function to calculate an id for a :obj:`.Track`.
+
+    This functions calculates the median for each bit of the detections in the track and then uses a
+    threshold to decide whether a bit is set or not.
+
+    Note:
+        Used as default implementation to calculate :attr:`.Score.calc_id`.
+
+    Arguments:
+        tracks (:obj:`list` of :obj:`.Track`): A list of :obj:`.Track` object to calculate
+            an id based on it's list of :obj:`Detection` objects.
+
+    Returns:
+        int: the calculated id for the :obj:`.Track`
+    """
+    return bit_array_to_int_v(calc_median_ids(tracks))

@@ -48,21 +48,23 @@ Attributes:
         like scoring metrics
 """
 
-Score = namedtuple('Score', ['value', 'track_id', 'truth_id', 'metrics', 'alternatives'])
+Score = namedtuple('Score', ['value', 'track_id', 'truth_id', 'calc_id', 'metrics', 'alternatives'])
 if PY3:
     Score.__doc__ = """
-A :obj:`Score` defines how similar two :obj:`Track` objects are.
+A :obj:`Score` defines how similar a :obj:`Track` object is with a truth path.
 
 Example:
-    When scoring :obj:`Track` objects like
-    ``Track(id=1, ids=['A', 'A', 'B', 'B', 'C', 'C'], timestamps=(...), meta={})`` a :obj:`Score`
-    would look like:
-    ``Score(value=0.33, track_id=1, truth_id='A', metrics=ScoreMetrics(), alternatives=['B', 'C'])``
+    When scoring a :obj:`Track` object like
+    ``Track(id=1, ids=['A', 'A', 'B', 'B', 'C', 'C'], timestamps=(...), meta={})``
+    a :obj:`Score` would look like:
+    ``Score(value=0.33, track_id=1, truth_id='A', calc_id='A',
+            metrics=ScoreMetrics(), alternatives=['B', 'C'])``
 
 Attributes:
     value (float): The scoring value calculated via a scoring function using the :obj:`ScoreMetrics`
     track_id (int or str): :obj:`Track` id we are scoring
-    truth_id (int or str): truth id of the :obj:`Track` we are matching against
+    truth_id (int): truth id of the :obj:`Track` we are matching against
+    calc_id (int): the calculated id for this :obj:`Track`
     metrics (:obj:`ScoreMetrics`): metrics describing the differences between :obj:`Track` objects
     alternatives (:obj:`list`): alternative truth ids that have the same score
 """

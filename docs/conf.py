@@ -18,10 +18,6 @@ import os
 import subprocess
 import json
 import six
-# import separately because we want to enhance the docstrings
-from bb_tracking.data import DataWrapperBinary, DataWrapperTruthBinary, DataWrapperPandas, \
-    DataWrapperTruthPandas, DataWrapperTracks, DataWrapperTruthTracks
-
 
 def get_modules():
     cwd = os.path.dirname(__file__)
@@ -46,6 +42,9 @@ autodoc_mock_imports = get_modules()
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 sys.path.insert(0, os.path.abspath('../'))
+# import separately because we want to enhance the docstrings
+from bb_tracking.data import DataWrapperBinary, DataWrapperTruthBinary, DataWrapperPandas, \
+    DataWrapperTruthPandas, DataWrapperTracks, DataWrapperTruthTracks
 
 # -- General configuration ------------------------------------------------
 

@@ -12,10 +12,15 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import inspect
 import sys
 import os
 import subprocess
 import json
+import six
+# import separately because we want to enhance the docstrings
+from bb_tracking.data import DataWrapperBinary, DataWrapperTruthBinary, DataWrapperPandas, \
+    DataWrapperTruthPandas, DataWrapperTracks, DataWrapperTruthTracks
 
 
 def get_modules():
@@ -323,9 +328,7 @@ add_module_names = False
 
 
 def linkcode_resolve(domain, info):
-    """
-    Determine the URL corresponding to Python object
-    """
+    """Determine the URL corresponding to Python object"""
     import inspect
     from os.path import relpath, dirname
     import bb_tracking
@@ -370,3 +373,14 @@ def linkcode_resolve(domain, info):
     git_rev = git_rev.decode('utf-8').rstrip('\n')
     return "https://github.com/BioroboticsLab/bb_tracking/blob/{}/python/bb_tracking/{}{}".format(
        git_rev, fn, linespec)
+
+# for Python 3 we can copy the docstrings to use the documentation from the abstract class
+if six.PY3:
+    classes_to_doc = (DataWrapperBinary, DataWrapperTruthBinary, DataWrapperPandas,
+                      DataWrapperTruthPandas, DataWrapperTracks, DataWrapperTruthTracks)
+    for cls in classes_to_doc:
+        for class_attr_name in dir(cls):
+            class_attr = getattr(cls, class_attr_name)
+            if class_attr.__doc__ or not callable(class_attr):
+                continue
+            class_attr.__doc__ = inspect.getdoc(class_attr)

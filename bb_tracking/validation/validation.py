@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from ..data import DataWrapperPandas, DataWrapperTracks, Score, ScoreMetrics
 from ..data.constants import CAMKEY, FPKEY, FRAMEIDXKEY
-from ..tracking import calc_track_ids, bit_array_to_int_v
+from ..tracking.scoring import calc_track_ids, bit_array_to_int_v
 
 
 class Validator(object):

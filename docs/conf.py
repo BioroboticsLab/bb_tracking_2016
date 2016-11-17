@@ -266,7 +266,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'bb_tracking.tex', u'bb_tracking Documentation',
+    (master_doc, 'bb_tracking.tex', u'bb\_tracking Documentation',
      u'Benjamin Rosemann', 'manual'),
 ]
 
@@ -310,8 +310,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'bb_tracking', u'bb_tracking Documentation',
-     author, 'bb_tracking', 'One line description of project.',
+    (master_doc, 'bb\_tracking', u'bb\_tracking Documentation',
+     author, 'bb\_tracking',
+     'This module provides classes and functions for tracking beesbook data.',
      'Miscellaneous'),
 ]
 

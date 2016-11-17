@@ -1,4 +1,4 @@
-Welcome to bb_tracking's documentation!
+Welcome to bb\_tracking's documentation!
 ========================================
 
 This module provides classes and functions for tracking beesbook data.

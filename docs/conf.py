@@ -18,7 +18,9 @@ import os
 import subprocess
 import json
 import six
+from unittest.mock import MagicMock
 
+# auto mock modules for autodoc
 def get_modules():
     cwd = os.path.dirname(__file__)
     print(cwd)
@@ -42,7 +44,15 @@ autodoc_mock_imports = get_modules()
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 sys.path.insert(0, os.path.abspath('../'))
-# import separately because we want to enhance the docstrings
+
+# we import DataWrappers and mock dependencies because we want to improve the docstrings
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+MOCK_MODULES = ['numpy', 'pandas', 'scipy', 'scipy.spatial', 'bb_binary']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 from bb_tracking.data import DataWrapperBinary, DataWrapperTruthBinary, DataWrapperPandas, \
     DataWrapperTruthPandas, DataWrapperTracks, DataWrapperTruthTracks
 

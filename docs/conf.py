@@ -12,12 +12,15 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import inspect
 import sys
 import os
 import subprocess
 import json
+import six
+from unittest.mock import MagicMock
 
-
+# auto mock modules for autodoc
 def get_modules():
     cwd = os.path.dirname(__file__)
     print(cwd)
@@ -41,6 +44,17 @@ autodoc_mock_imports = get_modules()
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 sys.path.insert(0, os.path.abspath('../'))
+
+# we import DataWrappers and mock dependencies because we want to improve the docstrings
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+MOCK_MODULES = ['numpy', 'pandas', 'scipy', 'scipy.spatial', 'bb_binary']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+from bb_tracking.data import DataWrapperBinary, DataWrapperTruthBinary, DataWrapperPandas, \
+    DataWrapperTruthPandas, DataWrapperTracks, DataWrapperTruthTracks
 
 # -- General configuration ------------------------------------------------
 
@@ -252,7 +266,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'bb_tracking.tex', u'bb_tracking Documentation',
+    (master_doc, 'bb_tracking.tex', u'bb\_tracking Documentation',
      u'Benjamin Rosemann', 'manual'),
 ]
 
@@ -296,8 +310,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'bb_tracking', u'bb_tracking Documentation',
-     author, 'bb_tracking', 'One line description of project.',
+    (master_doc, 'bb\_tracking', u'bb\_tracking Documentation',
+     author, 'bb\_tracking',
+     'This module provides classes and functions for tracking beesbook data.',
      'Miscellaneous'),
 ]
 
@@ -323,9 +338,7 @@ add_module_names = False
 
 
 def linkcode_resolve(domain, info):
-    """
-    Determine the URL corresponding to Python object
-    """
+    """Determine the URL corresponding to Python object"""
     import inspect
     from os.path import relpath, dirname
     import bb_tracking
@@ -370,3 +383,14 @@ def linkcode_resolve(domain, info):
     git_rev = git_rev.decode('utf-8').rstrip('\n')
     return "https://github.com/BioroboticsLab/bb_tracking/blob/{}/python/bb_tracking/{}{}".format(
        git_rev, fn, linespec)
+
+# for Python 3 we can copy the docstrings to use the documentation from the abstract class
+if six.PY3:
+    classes_to_doc = (DataWrapperBinary, DataWrapperTruthBinary, DataWrapperPandas,
+                      DataWrapperTruthPandas, DataWrapperTracks, DataWrapperTruthTracks)
+    for cls in classes_to_doc:
+        for class_attr_name in dir(cls):
+            class_attr = getattr(cls, class_attr_name)
+            if class_attr.__doc__ or not callable(class_attr):
+                continue
+            class_attr.__doc__ = inspect.getdoc(class_attr)

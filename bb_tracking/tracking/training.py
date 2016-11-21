@@ -34,6 +34,8 @@ def generate_learning_data(dw_truth, features, frame_diff, radius):
 
             - **x_data** (:obj:`np.array`): The learning data
             - **y_data** (:obj:`np.array`): The correct classes for the learning data
+            - **tracks** (:obj:`list` of :obj:`.Track`): list of tracks generated while generating
+                learning data.
     """
     def score_fun_learning(tracks_path, frame_objects_test):
         """Scoring function that fills ``learning_data`` and ``learning_target`` for classifier.
@@ -86,7 +88,7 @@ def generate_learning_data(dw_truth, features, frame_diff, radius):
     mask[y_data == -1] = False
     y_data = y_data[mask]
     x_data = x_data[mask, ]
-    return x_data, y_data
+    return x_data, y_data, tracks
 
 
 def train_and_evaluate(clf, x_data, y_data, verbose=False, **kwargs):
@@ -185,6 +187,6 @@ def train_bin_clf(clf, dw_truth, features, frame_diff, radius, **kwargs):
 
     # make a copy of the feature functions because the training and scoring functions depend on them
     features = copy.deepcopy(features)
-    x_data, y_data = generate_learning_data(dw_truth, features, frame_diff, radius)
+    x_data, y_data, _ = generate_learning_data(dw_truth, features, frame_diff, radius)
     train_and_evaluate(clf, x_data, y_data, **kwargs)
     return x_data, y_data, score_fun_generic

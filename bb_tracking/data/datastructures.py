@@ -54,11 +54,11 @@ if PY3:
 A :obj:`Score` defines how similar a :obj:`Track` object is with a truth path.
 
 Example:
-    When scoring a :obj:`Track` object like
-    ``Track(id=1, ids=['A', 'A', 'B', 'B', 'C', 'C'], timestamps=(...), meta={})``
-    a :obj:`Score` would look like:
-    ``Score(value=0.33, track_id=1, truth_id='A', calc_id='A',
-            metrics=ScoreMetrics(), alternatives=['B', 'C'])``
+    This is an example for a :obj:`Track` and a resulting :obj:`Score`::
+
+        Track(id=1, ids=['A', 'A', 'B', 'B', 'C', 'C'], timestamps=(...), meta={})
+        Score(value=0.33, track_id=1, truth_id='A', calc_id='A',
+              metrics=ScoreMetrics(), alternatives=['B', 'C'])
 
 Attributes:
     value (float): The scoring value calculated via a scoring function using the :obj:`ScoreMetrics`

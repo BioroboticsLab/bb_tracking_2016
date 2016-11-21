@@ -366,21 +366,64 @@ def test_get_neighbors(data, detections, timestamps):
     assert str(excinfo.value) == "Type {} not supported.".format(type(ids[0]))
 
 
-def test_get_neighbors_tracks(data_tracks):
+def test_get_neighbors_tracks(data, tracks_test):
     """Test the calculation of nearest neighbors for tracks."""
+    if not isinstance(data, DataWrapperTracks):
+        return
+    ids = [track.id for track in tracks_test]
+    tracks = data.get_tracks(ids)
+    timestamps = data.timestamps
+
+    # expect empty result
+    assert len(data.get_neighbors(tracks[0], 0, radius=0.5)) == 0
+
+    # timestamp without matching frame
+    assert len(data.get_neighbors(tracks[0], 0, timestamp=timestamps[5])) == 0
+
+    # expect all tracks from first frame except 2
+    neighbors = data.get_neighbors(tracks[1], 0)
+    assert set((ids[0], ids[2])) == set([det.id for det in neighbors])
+
+    # different timestamp
+    neighbors = data.get_neighbors(tracks[1], 0, timestamp=timestamps[2])
+    assert set((ids[3], )) == set([det.id for det in neighbors])
+
+    # test with detection instead of track
+    detection = tracks[1].meta[DETKEY][-1]
+    neighbors = data.get_neighbors(detection, 0)
+    assert set((ids[0], ids[1], ids[2])) == set([det.id for det in neighbors])
+
+    distance = math.sqrt(2)
+    # expect exactly one track
+    neighbors = data.get_neighbors(tracks[1], 0, radius=distance)
+    assert set((ids[2], )) == set([det.id for det in neighbors])
+
+    # test with Track but empty meta
+    track = tracks[1]._replace(meta={})
+    if data.data is not None:
+        neighbors = data.get_neighbors(track, 0, radius=distance)
+        assert set((ids[2], )) == set([det.id for det in neighbors])
+    else:
+        with pytest.raises(TypeError) as excinfo:
+            data.get_neighbors(track, 0, radius=distance)
+        assert str(excinfo.value) == "Track without detections not supported."
+
+    # test other types
+    with pytest.raises(TypeError) as excinfo:
+        data.get_neighbors(ids[0], 0)
+    assert str(excinfo.value) == "Type {} not supported.".format(type(ids[0]))
+
+
+def test_get_frame_objects_starting(data_tracks):
+    """Test the extraction of tracks starting in a frame."""
     cam_id = 0
     timestamp = data_tracks.timestamps[0]
-    test_track = Track(id=2, ids=[4, ], timestamps=[timestamp, ], meta={})
-    tracks = data_tracks.get_neighbors(test_track, cam_id)
-    assert set([1, 3]) == set([track.id for track in tracks])
+    test_tracks = data_tracks.get_frame_objects_starting(cam_id=cam_id, timestamp=timestamp)
+    assert set([1, 2, 3]) == set([track.id for track in test_tracks])
 
     timestamp = data_tracks.timestamps[2]
-    tracks = data_tracks.get_neighbors(test_track, cam_id, timestamp=timestamp)
+    tracks = data_tracks.get_frame_objects_starting(cam_id=cam_id, timestamp=timestamp)
     assert set([4]) == set([track.id for track in tracks])
-
-    with pytest.raises(TypeError) as excinfo:
-        data_tracks.get_neighbors(0, cam_id)
-    assert str(excinfo.value) == "Type {} not supported.".format(type(0))
 
 
 def test_get_all_detection_ids(data_truth, id_translator):

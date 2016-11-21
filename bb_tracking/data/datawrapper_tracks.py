@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint:disable=too-many-instance-attributes
 """
 This implementations of :class:`.DataWrapper` are also using dictionaries with shared data
 objects as backend. The difference to :class:`.DataWrapperBinary` is that they are managing
@@ -9,6 +10,7 @@ Sometimes it is necessary to have additional information about detections for tr
 validation purposes. So it is posssible to inject another instance of :class:`.DataWrapper` and
 :class:`.DataWrapperTracks` will delegate tasks it can not fullfill to this instance.
 """
+from scipy.spatial import cKDTree
 from .constants import CAMKEY, DETKEY
 from .datastructures import Detection, Track
 from .datawrapper import DataWrapper, DataWrapperTruth
@@ -19,9 +21,6 @@ class DataWrapperTracks(DataWrapper):
 
     This class is implemented with a focus on performance. It is possible to inject a
     :class:`.DataWrapper` for other, non performant related tasks.
-
-    Todo:
-        :func:`get_neighbors()` does not support the radius argument!
     """
     cam_ids = None
     """:obj:`list` of int: sorted list with all available camera ids"""
@@ -33,12 +32,14 @@ class DataWrapperTracks(DataWrapper):
     """:obj:`dict`: ``{(cam_id, timestamp): list of track}`` :obj:`.Track` ends in frame"""
     frame_track_start = None
     """:obj:`dict`: ``{(cam_id, timestamp): list of track}`` :obj:`.Track` starts in frame"""
+    frame_trees = None
+    """:obj:`dict`: ``{(cam_id, timestamp): KDTree}`` mapping"""
     timestamps = None
     """:obj:`list` of timestamp: sorted list with all available timestamps"""
     tracks = None
     """:obj:`dict`: ``{track_id: track}`` mapping for :obj:`.Track`"""
 
-    def __init__(self, tracks, cam_timestamps, data=None, end_offset=0):
+    def __init__(self, tracks, cam_timestamps, data=None):
         """Initialization for DataWrapperTracks
 
         Note:
@@ -52,7 +53,6 @@ class DataWrapperTracks(DataWrapper):
 
         Keyword Arguments:
             data (Optional :class:`.DataWrapper`): A DataWrapper provides access to detections.
-            end_offset (Optional int): The track will end on ``len(track) - end_offset``
         """
         assert len(tracks) > 0, "No tracks!"
         self.cam_ids = list(cam_timestamps.keys())
@@ -82,9 +82,17 @@ class DataWrapperTracks(DataWrapper):
             time_start = track.timestamps[0]
             self.frame_track_start[(cam_id_start, time_start)].append(track)
 
-            cam_id_end = list(self.get_camids(frame_object=track.meta[DETKEY][-1 - end_offset]))[0]
-            time_end = track.timestamps[-1 - end_offset]
+            cam_id_end = list(self.get_camids(frame_object=track.meta[DETKEY][-1]))[0]
+            time_end = track.timestamps[-1]
             self.frame_track_end[(cam_id_end, time_end)].append(track)
+
+        # precalculate kd-trees
+        self.frame_trees = dict()
+        for frame_key, tracks in self.frame_track_start.items():
+            if len(tracks) == 0:
+                continue
+            xy_cols = [(track.meta[DETKEY][0].x, track.meta[DETKEY][0].y) for track in tracks]
+            self.frame_trees[frame_key] = cKDTree(xy_cols)
 
     def get_camids(self, frame_object=None):
         if frame_object is None:
@@ -153,14 +161,33 @@ class DataWrapperTracks(DataWrapper):
         return self.frame_track_start[(cam_id, timestamp)]
 
     def get_neighbors(self, frame_object, cam_id, radius=10, timestamp=None):
-        if not isinstance(frame_object, Track):
+        if isinstance(frame_object, Track):
+            if DETKEY in frame_object.meta.keys():
+                detection = frame_object.meta[DETKEY][-1]
+            elif self.data is not None:
+                detection = self.get_detection(frame_object.ids[-1])
+            else:
+                raise TypeError("Track without detections not supported.")
+        elif isinstance(frame_object, Detection):
+            detection = frame_object
+        else:
             raise TypeError("Type {0} not supported.".format(type(frame_object)))
+        # determine search parameters
+        timestamp = timestamp or detection.timestamp
+        frame_key = (cam_id, timestamp)
 
-        timestamp = timestamp or frame_object.timestamps[-1]
+        # use spatial tree for efficient neighborhood search
+        if frame_key not in self.frame_trees:
+            return []
+        tree = self.frame_trees[frame_key]
+        indices = tree.query_ball_point((detection.x, detection.y), radius)
 
-        return [track for track in
-                self.get_frame_objects_starting(cam_id=cam_id, timestamp=timestamp)
-                if track.id != frame_object.id]
+        # translate tree Indices in track ids and remove search item
+        tracks = self.frame_track_start[frame_key]
+        found = [tracks[tidx] for tidx in indices]
+        if timestamp == detection.timestamp and isinstance(frame_object, Track):
+            found = [track for track in found if track.id != frame_object.id]
+        return found
 
     def get_timestamps(self, cam_id=None):
         if cam_id is not None:

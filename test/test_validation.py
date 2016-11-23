@@ -58,8 +58,12 @@ def test_sanity_check(validator, id_translator):
         tracks = (Track(id=1, ids=get_ids(1, 2), timestamps=[1, 2], meta={}),
                   Track(id=2, ids=get_ids(1, 2), timestamps=[1, 2], meta={}),)
         validator.sanity_check(tracks, cam_gap=False)
-    message = "IDs {} are assigned multiple times."
-    assert str(excinfo.value) == message.format(set(get_ids(1, 2)))
+    # test a little more complicated because of unordered sets
+    partial_message = "are assigned multiple times."
+    assert partial_message in str(excinfo.value)
+    for test_id in get_ids(1, 2):
+        assert str(test_id) in str(excinfo.value)
+    assert str(excinfo.value).count(',') == 1
     # unknown ids
     with pytest.raises(AssertionError) as excinfo:
         ids = get_ids(1)

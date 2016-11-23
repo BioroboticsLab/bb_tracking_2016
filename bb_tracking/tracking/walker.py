@@ -271,7 +271,7 @@ class SimpleWalker(object):
                 for key in track.meta.keys():
                     if key not in frame_object.meta.keys():
                         continue
-                    if hasattr(frame_object.meta[key], "__len__"):
+                    if isinstance(frame_object.meta[key], list):
                         track.meta[key].extend(frame_object.meta[key])
             else:  # pragma: no cover
                 raise TypeError("Type {0} not supported.".format(type(frame_object)))

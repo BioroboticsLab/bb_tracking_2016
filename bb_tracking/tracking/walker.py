@@ -310,7 +310,8 @@ class SimpleWalker(object):
             tracks_path.extend([track_path] * len(neighbors))
             fo_test.extend(neighbors)
         cost_matrix = np.full((len(waiting), len(fo_index_rev)), self.max_weight)
-        cost_matrix[waiting_indices, fo_indices] = self.score_fun(tracks_path, fo_test)
+        if len(fo_test) > 0:
+            cost_matrix[waiting_indices, fo_indices] = self.score_fun(tracks_path, fo_test)
         return cost_matrix
 
     def _resolve_claims(self, cost_matrix):

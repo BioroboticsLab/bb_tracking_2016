@@ -181,6 +181,19 @@ def test_calc_make_claims(simple_walker, detections_simple_tracking, object_type
     assert set([0, neighbor_distance, simple_walker.max_weight]) == set(np.unique(cost_matrix))
     assert np.allclose(expected_cost_matrix, cost_matrix)
 
+    if object_type == "detections":
+        # no matching frame objects for ALL tracks in waiting list
+        data = simple_walker.data
+        data.detections.loc[data.detections[data.cols['timestamp']] >= timestamps[tidx],
+                            data.cols['x']] += 1000
+        tidx, timestamps, frame_objects, waiting = setup_for_assignment(simple_walker,
+                                                                        object_type=object_type,
+                                                                        time_idx=2)
+        # idee: füge eine weitere detektion mit unnereeicbaren abstand hinzu.
+        cost_matrix = simple_walker._calc_make_claims(cam_id, tidx, timestamps[tidx],
+                                                      frame_objects, waiting)
+        assert np.all(cost_matrix == simple_walker.max_weight)
+
 
 def test_resolve_claims(simple_walker):
     """Test the resolving of claims with conflicts."""
@@ -195,6 +208,12 @@ def test_resolve_claims(simple_walker):
     cost_matrix = np.array([[0, 5], [5, simple_walker.max_weight]])
     rows, cols = simple_walker._resolve_claims(cost_matrix)
     assert all(rows == [0, 1]) and all(cols == [0, 1])
+
+    # no assignments
+    cost_matrix = np.full((5, 4), simple_walker.max_weight)
+    rows, cols = simple_walker._resolve_claims(cost_matrix)
+    assert len(rows) == 4
+    assert len(cols) == 4
 
 
 @pytest.mark.parametrize("object_type", ["detections", "tracks"])

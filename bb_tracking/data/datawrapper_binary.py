@@ -109,7 +109,10 @@ class DataWrapperBinary(DataWrapper):
             self.detections_dict[detection_id] = detection_tuple
             self.frame_detections[(cam_id, timestamp)].append(detection_tuple)
             xy_cols.append((detection.xpos, detection.ypos))
-        self.frame_trees[(cam_id, timestamp)] = cKDTree(xy_cols)
+
+        # we might have frames without detections
+        if len(xy_cols) > 0:
+            self.frame_trees[(cam_id, timestamp)] = cKDTree(xy_cols)
 
     def get_camids(self, frame_object=None):
         if frame_object is None:

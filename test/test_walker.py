@@ -222,10 +222,11 @@ def test_calc_assign(simple_walker, detections_simple_tracking, object_type):
     truth_tracks = detections_simple_tracking[1]
 
     # test with empty frame objects
-    assert ([], set()) == simple_walker._calc_assign(0, 0, None, [], [])
+    assert ([], set()) == simple_walker._calc_assign(0, 0, None, [], [], [])
 
     # setup waiting list...
     time_idx, timestamps, frame_objects, waiting = setup_for_assignment(simple_walker, object_type)
+    timestamps = timestamps.tolist()
     cam_id = 0
 
     if object_type == "tracks":
@@ -250,13 +251,14 @@ def test_calc_assign(simple_walker, detections_simple_tracking, object_type):
             track.timestamps.append(timestamp)
             track.meta[DETKEY].append(detection)
 
+    timestamp = timestamps[time_idx]
     # verify new waiting and assigned list with truth data
-    waiting_new, assigned_new = simple_walker._calc_assign(cam_id, time_idx, timestamps[time_idx],
+    waiting_new, assigned_new = simple_walker._calc_assign(cam_id, time_idx, timestamp, timestamps,
                                                            frame_objects, waiting)
     assert expected_assigned == assigned_new
     assert waiting_expected == waiting_new
 
     # test other types
     with pytest.raises(TypeError) as excinfo:
-        simple_walker._calc_assign(cam_id, time_idx, timestamps[time_idx], [1, 2, 3], waiting)
+        simple_walker._calc_assign(cam_id, time_idx, timestamp, timestamps, [1, 2, 3], waiting)
     assert str(excinfo.value) == "Type {} not supported.".format(type(1))

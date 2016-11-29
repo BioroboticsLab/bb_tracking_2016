@@ -46,7 +46,11 @@ def test_sanity_check(validator, id_translator):
     # duplicate timestamps
     with pytest.raises(AssertionError) as excinfo:
         validator.sanity_check((Track(id=1, ids=get_ids(1, 2), timestamps=[1, 1], meta={}), ))
-    assert str(excinfo.value) == "Duplicate tstamps in track 1."
+    assert str(excinfo.value) == "Duplicate timestamps in track 1."
+    # timestamps not in order
+    with pytest.raises(AssertionError) as excinfo:
+        validator.sanity_check((Track(id=1, ids=get_ids(1, 2), timestamps=[2, 1], meta={}), ))
+    assert "Timestamps in track 1 not in order." in str(excinfo.value)
     # duplicate track ids
     with pytest.raises(AssertionError) as excinfo:
         tracks = (Track(id=1, ids=get_ids(1, 3), timestamps=[1, 2], meta={}),

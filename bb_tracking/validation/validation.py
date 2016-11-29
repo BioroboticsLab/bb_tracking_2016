@@ -91,7 +91,9 @@ class Validator(object):
                 "Duplicate ids in track {}.".format(track.id)
             tstamps = set(track.timestamps)
             assert len(tstamps) == len(track_detection_ids), \
-                "Duplicate tstamps in track {}.".format(track.id)
+                "Duplicate timestamps in track {}.".format(track.id)
+            assert all(i < j for i, j in zip(track.timestamps, track.timestamps[1:])),\
+                "Timestamps in track {} not in order.".format(track.id)
             duplicates = assigned_ids & track_detection_ids
             assert len(duplicates) == 0, "IDs {} are assigned multiple times.".format(duplicates)
             assigned_ids |= track_detection_ids

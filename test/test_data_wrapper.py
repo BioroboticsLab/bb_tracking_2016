@@ -107,6 +107,14 @@ def test_init_binary(detections_binary):
     assert detection.y == detection.meta['y']
 
 
+def test_init_binary_empty_frames(detections_binary_empty):
+    """Test initializing the DataWrapperBinary Class with (some) Frames without detections."""
+    with pytest.raises(AssertionError) as excinfo:
+        DataWrapperBinary(detections_binary_empty)
+
+    assert str(excinfo.value) == "Repository is empty."
+
+
 def test_init_truth(detections, truth, truth_clean):
     """Test initializing the DataWrapperTruthPandas Class."""
     data = DataWrapperTruthPandas(detections, truth, 1)

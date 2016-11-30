@@ -12,7 +12,7 @@ dev_reqs_parsed = [str(ir.req) for ir in install_reqs]
 
 setup(
     name='bb_tracking',
-    version='0.1',
+    version='0.11',
     description='BeesBook Tracking Utilities',
     author='Benjamin Rosemann',
     author_email='benjamin.rosemann@fu-berlin.de',

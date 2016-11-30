@@ -70,8 +70,8 @@ class SimpleWalker(object):
             This will have to be adjusted once the stitching is completed.
 
         Keyword Arguments:
-            start (timestamp): restrict to frames with timestamp >= start
-            stop (timestamp): restrict to frames with timestamp < stop
+            start (tstamp): restrict to frames with tstamp >= start
+            stop (tstamp): restrict to frames with tstamp < stop
 
         Returns:
             :obj:`list` of :obj:`.Track`: :obj:`list` of merged :obj:`.Track`
@@ -83,31 +83,32 @@ class SimpleWalker(object):
 
         closed_tracks = []
         for cam_id in self.data.get_camids():
-            timestamps = self.data.get_timestamps(cam_id=cam_id)
+            tstamps = self.data.get_timestamps(cam_id=cam_id)
             waiting = []
-            for time_idx, timestamp in enumerate(timestamps):
+            for time_idx, tstamp in enumerate(tstamps):
                 # not within time range (yet)
-                if start is not None and timestamp < start:
+                if start is not None and tstamp < start:
                     continue
 
                 # out of time range (now)
-                if stop is not None and timestamp >= stop:
+                if stop is not None and tstamp >= stop:
                     break
 
-                waiting = calc_timestep(cam_id, time_idx, timestamp, waiting, closed_tracks)
+                waiting = calc_timestep(cam_id, time_idx, tstamp, tstamps, waiting, closed_tracks)
 
             # close remaining tracks
             for _, waiting_track in waiting:
                 closed_tracks.append(waiting_track)
         return closed_tracks
 
-    def _calc_timestep_detections(self, cam_id, time_idx, timestamp, waiting, closed_tracks):
+    def _calc_timestep_detections(self, cam_id, time_idx, tstamp, tstamps, waiting, closed_tracks):
         """Assigns detections of type :obj:`Detection` to tracks :obj:`Track` in the waiting list.
 
         Arguments:
             cam_id (int): the cam to consider
-            time_idx (int): current time index in `timestamps`
-            timestamp (timestamp): the current timestamp
+            time_idx (int): current time index in `tstamps`
+            tstamp (tstamp): the current timestamp
+            tstamps (list of timestamps): list of all available timestamps for walker
             waiting (:obj:`list` of :obj:`.Track`): the waiting list with tracks to be extended
                 or closed
             closed_tracks (:obj:`list` of :obj:`.Track`): list with closed tracks
@@ -115,7 +116,7 @@ class SimpleWalker(object):
         Returns:
             list of obj:`.Track`: new waiting list with new or extended tracks
         """
-        frame_objects = self.data.get_frame_objects(cam_id=cam_id, timestamp=timestamp)
+        frame_objects = self.data.get_frame_objects(cam_id=cam_id, timestamp=tstamp)
         # no waiting tracks so load all from current frame
         if not waiting:
             waiting = self._calc_initialize(time_idx, frame_objects, waiting)
@@ -123,19 +124,21 @@ class SimpleWalker(object):
         # close track
         waiting = self._calc_close_tracks(time_idx, waiting, closed_tracks)
         # assign frame objects to tracks
-        waiting, assigned = self._calc_assign(cam_id, time_idx, timestamp, frame_objects, waiting)
+        waiting, assigned = self._calc_assign(cam_id, time_idx, tstamp, tstamps,
+                                              frame_objects, waiting)
         # add unclaimed frame objects as new tracks
         unassigned = set([obj.id for obj in frame_objects]) - assigned
         return self._calc_initialize(time_idx, self.data.get_detections(unassigned), waiting)
 
-    def _calc_timestep_tracks(self, cam_id, time_idx, timestamp, waiting, closed_tracks):
+    def _calc_timestep_tracks(self, cam_id, time_idx, tstamp, tstamps, waiting, closed_tracks):
         """Assigns tracks of type :obj:`.Track` to other tracks of type :obj:`.Track`
         in the waiting list.
 
         Arguments:
             cam_id (int): the cam to consider
-            time_idx (int): current time index in `timestamps`
-            timestamp (timestamp): the current timestamp
+            time_idx (int): current time index in `tstamps`
+            tstamp (tstamp): the current tstamp
+            tstamps (list of timestamps): list of all available timestamps for walker
             waiting (:obj:`list` of :obj:`.Track`): the waiting list with tracks to be extended
                 or closed
             closed_tracks (:obj:`list` of :obj:`.Track`): list with closed tracks
@@ -145,7 +148,7 @@ class SimpleWalker(object):
         """
         frame_objects = [frame_object
                          for frame_object in self.data.get_frame_objects(cam_id=cam_id,
-                                                                         timestamp=timestamp)
+                                                                         timestamp=tstamp)
                          if frame_object.id not in self.assigned_tracks]
         # no waiting tracks so load all from current frame
         if not waiting:
@@ -157,8 +160,8 @@ class SimpleWalker(object):
         # assign frame objects to tracks
         # When assigning Tracks the Frame where they start and end is often not the same.
         # Therefore we have to replace `frame_objects` with Tracks that start in this Frame.
-        fot = self.data.get_frame_objects_starting(cam_id=cam_id, timestamp=timestamp)
-        waiting, assigned = self._calc_assign(cam_id, time_idx, timestamp, fot, waiting)
+        fot = self.data.get_frame_objects_starting(cam_id=cam_id, timestamp=tstamp)
+        waiting, assigned = self._calc_assign(cam_id, time_idx, tstamp, tstamps, fot, waiting)
         # add unclaimed frame objects as new tracks
         unassigned = set([obj.id for obj in frame_objects]) - assigned
         self.assigned_tracks |= assigned | unassigned
@@ -168,7 +171,7 @@ class SimpleWalker(object):
         """Initializes the waiting list with Tracks.
 
         Arguments:
-            time_idx (int): current time index in `timestamps`
+            time_idx (int): current time index in `tstamps`
             frame_objects (list of :obj:`.Detection` or :obj:`.Track`): the frame objects associated
                 with the current frame
             waiting (list of :obj:`.Track`): the waiting list with tracks to be extended or closed
@@ -209,7 +212,7 @@ class SimpleWalker(object):
         """Closes tracks in the waiting list that can/should not be extended.
 
         Arguments:
-            time_idx (int): current time index in `timestamps`
+            time_idx (int): current time index in `tstamps`
             waiting (list of :obj:`.Track`): the waiting list with tracks to be extended or closed
             closed_tracks (list of :obj:`.Track`): list with closed tracks
 
@@ -224,13 +227,14 @@ class SimpleWalker(object):
                 new_waiting.append([time_last_add, waiting_track])
         return new_waiting
 
-    def _calc_assign(self, cam_id, time_idx, timestamp, frame_objects, waiting):
+    def _calc_assign(self, cam_id, time_idx, tstamp, tstamps, frame_objects, waiting):
         """Assigns frame objects to tracks in the waiting list.
 
         Arguments:
             cam_id (int): the cam to consider
-            time_idx (int): current time index in `timestamps`
-            timestamp (timestamp): the current timestamp
+            time_idx (int): current time index in `tstamps`
+            tstamp (tstamp): the current tstamp
+            tstamps (list of timestamps): list of all available timestamps for walker
             frame_objects (list of :obj:`.Detection` or :obj:`.Track`): the frame objects associated
                 with the current frame
             waiting (list of :obj:`.Track`): the waiting list with tracks to be extended or closed
@@ -240,12 +244,13 @@ class SimpleWalker(object):
                 - **waiting** (:obj:`.Track`): new waiting list with new or extended tracks
                 - **assigned** (:obj:`set` of ids): set with assigned detection ids
         """
+        # pylint:disable=too-many-locals
         if len(frame_objects) == 0:
             return waiting, set()
         if not isinstance(frame_objects[0], (Detection, Track)):
             raise TypeError("Type {0} not supported.".format(type(frame_objects[0])))
         # make claims
-        cost_matrix = self._calc_make_claims(cam_id, time_idx, timestamp, frame_objects, waiting)
+        cost_matrix = self._calc_make_claims(cam_id, time_idx, tstamp, frame_objects, waiting)
         # resolve claims
         assigned = set()
         rows, cols = self._resolve_claims(cost_matrix)
@@ -261,30 +266,35 @@ class SimpleWalker(object):
             track = waiting[waiting_idx][1]
             if isinstance(frame_object, Detection):
                 track.ids.append(frame_object.id)
-                track.timestamps.append(timestamp)
+                track.timestamps.append(tstamp)
                 track.meta[DETKEY].append(frame_object)
             elif isinstance(frame_object, Track):
-                # count offset because a track has a length and we won't see it again for some time
-                waiting[waiting_idx][0] = time_idx + len(frame_object.ids)
+                # get offset because a track has a length and we won't see it again for some time
+                try:
+                    new_time_idx = np.where(tstamps == frame_object.timestamps[-1])[0][0] + 1
+                except IndexError:
+                    new_time_idx = tstamps.index(frame_object.timestamps[-1]) + 1
+
+                waiting[waiting_idx][0] = new_time_idx
                 track.ids.extend(frame_object.ids)
                 track.timestamps.extend(frame_object.timestamps)
                 for key in track.meta.keys():
                     if key not in frame_object.meta.keys():
                         continue
-                    if hasattr(frame_object.meta[key], "__len__"):
+                    if isinstance(frame_object.meta[key], list):
                         track.meta[key].extend(frame_object.meta[key])
             else:  # pragma: no cover
                 raise TypeError("Type {0} not supported.".format(type(frame_object)))
 
         return waiting, assigned
 
-    def _calc_make_claims(self, cam_id, time_idx, timestamp, frame_objects, waiting):
+    def _calc_make_claims(self, cam_id, time_idx, tstamp, frame_objects, waiting):
         """Make claims for tracks in waiting list.
 
         Arguments:
             cam_id (int): the cam to consider
-            time_idx (int): current time index in `timestamps`
-            timestamp (timestamp): the current timestamp
+            time_idx (int): current time index in `tstamps`
+            tstamp (tstamp): the current tstamp
             frame_objects (list of :obj:`.Detection` or :obj:`.Track`): the frame objects associated
                 with the current frame
             waiting (list of :obj:`.Track`): the waiting list with tracks to be extended or closed
@@ -301,7 +311,7 @@ class SimpleWalker(object):
             if track_time_idx > time_idx:
                 continue
             neighbors = self.data.get_neighbors(track_path, cam_id,
-                                                radius=self.radius, timestamp=timestamp)
+                                                radius=self.radius, timestamp=tstamp)
             if not neighbors:
                 continue
 
@@ -310,7 +320,8 @@ class SimpleWalker(object):
             tracks_path.extend([track_path] * len(neighbors))
             fo_test.extend(neighbors)
         cost_matrix = np.full((len(waiting), len(fo_index_rev)), self.max_weight)
-        cost_matrix[waiting_indices, fo_indices] = self.score_fun(tracks_path, fo_test)
+        if len(fo_test) > 0:
+            cost_matrix[waiting_indices, fo_indices] = self.score_fun(tracks_path, fo_test)
         return cost_matrix
 
     def _resolve_claims(self, cost_matrix):

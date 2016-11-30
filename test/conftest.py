@@ -28,7 +28,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import pytz
-from bb_binary import build_frame_container_from_df, Repository, int_id_to_binary, binary_id_to_int
+from bb_binary import build_frame_container, build_frame_container_from_df, Repository,\
+    int_id_to_binary, binary_id_to_int, Frame
 from bb_tracking.data import Detection, Track, DataWrapperPandas, DataWrapperTruthPandas, \
     DataWrapperBinary, DataWrapperTruthBinary, DataWrapperTracks, DataWrapperTruthTracks
 from bb_tracking.data.constants import CAMKEY, DETKEY, TRUTHKEY
@@ -147,6 +148,31 @@ def detections_binary(detections_clean):
     repo = Repository(test_repo)
     repo.add(fc_cam0)
     repo.add(fc_cam2)
+    return repo
+
+
+@pytest.fixture
+def detections_binary_empty():
+    """Fixture for bb_binary repository with empty frames."""
+    frame0 = Frame.new_message()
+    frame0.id = 0
+    frame0.timestamp = 0
+    frame0.detectionsUnion.init('detectionsDP', 0)
+
+    frame1 = Frame.new_message()
+    frame1.id = 1
+    frame1.timestamp = 1
+    frame1.detectionsUnion.init('detectionsDP', 0)
+    fc0 = build_frame_container(0, 1, 0)
+    fc0.init('frames', 2)
+    fc0.frames[0] = frame0
+    fc0.frames[1] = frame1
+    test_repo = PATH + 'test_repo'
+    if os.path.exists(test_repo):
+        shutil.rmtree(test_repo)
+    os.makedirs(test_repo)
+    repo = Repository(test_repo)
+    repo.add(fc0)
     return repo
 
 

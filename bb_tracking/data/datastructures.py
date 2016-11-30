@@ -9,7 +9,7 @@ the datastructures are missing.
 from collections import namedtuple
 from six import PY3
 
-Detection = namedtuple('Detection', ['id', 'timestamp', 'x', 'y', 'orientation', 'beeId', 'meta'])
+Detection = namedtuple('Detection', ['id', 'timestamp', 'x', 'y', 'orientation', 'beeId', 'descriptor', 'meta'])
 if PY3:
     Detection.__doc__ = """
 A :obj:`Detection` is one data point produced where (possibly) a bee was observed.
@@ -21,6 +21,7 @@ Attributes:
     y (float): y position in image coordinates
     orientation (float): the orientation of the tag/bee (zrotation in schema)
     beeId (int or iterable): interpretation of id
+    descriptor(list of ints): descriptor from the TagSimilarityEncoder
     meta (:obj:`dict`): dictionary with further information about a detection
         like localizer scores, truth ids, camera ids...
 """

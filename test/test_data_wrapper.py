@@ -8,7 +8,6 @@ from numpy.testing import assert_allclose
 import pandas as pd
 from pandas.util.testing import assert_frame_equal
 import pytest
-import pytz
 from bb_tracking.data import DataWrapper, DataWrapperTruth, DataWrapperPandas, \
     DataWrapperTruthPandas, DataWrapperBinary, DataWrapperTruthBinary, DataWrapperTracks, \
     Detection, Track
@@ -146,9 +145,7 @@ def test_init_truth_binary(detections_binary, truth_binary, truth_clean):
 def test_init_tracks(data_binary, tracks_test, id_translator):
     """Test initializing the DataWrapperTracks Class."""
     get_ids = id_translator(data_binary)
-    tracks = [Track(id=track.id, ids=get_ids(*track.ids),
-                    timestamps=[time.to_pydatetime().replace(tzinfo=pytz.utc)
-                                for time in track.timestamps],
+    tracks = [Track(id=track.id, ids=get_ids(*track.ids), timestamps=track.timestamps,
                     meta={DETKEY: data_binary.get_detections(get_ids(*track.ids))})
               for track in tracks_test]
     data = DataWrapperTracks(tracks, data_binary.cam_timestamps, data=data_binary)

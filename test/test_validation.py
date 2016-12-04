@@ -296,12 +296,9 @@ def test_score_track_gaps_cam(validator, timestamps, id_translator):
     """Tests scoring of tracks with camera gaps."""
     get_ids = id_translator(validator.truth)
     n = 5
-    validator.timestamps = [pd.to_datetime(t) for t in validator.timestamps]
-    validator.cam_timestamps = {cam_id: [pd.to_datetime(t) for t in cam_timestamps]
-                                for cam_id, cam_timestamps in validator.cam_timestamps.items()}
     # test the case with camera gaps off
     local_ids = get_ids(1, 2, 3, 10, 11)
-    local_timestamps = [pd.to_datetime(timestamps[i]) for i in range(n)]
+    local_timestamps = [timestamps[i] for i in range(n)]
 
     track_test = Track(1, ids=local_ids, timestamps=local_timestamps, meta={})
     track_truth = validator.truth.get_truth_track(1)

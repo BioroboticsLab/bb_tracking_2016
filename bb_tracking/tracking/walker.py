@@ -270,10 +270,7 @@ class SimpleWalker(object):
                 track.meta[DETKEY].append(frame_object)
             elif isinstance(frame_object, Track):
                 # get offset because a track has a length and we won't see it again for some time
-                try:
-                    new_time_idx = np.where(tstamps == frame_object.timestamps[-1])[0][0] + 1
-                except IndexError:
-                    new_time_idx = tstamps.index(frame_object.timestamps[-1]) + 1
+                new_time_idx = np.where(np.array(tstamps) == frame_object.timestamps[-1])[0][0] + 1
 
                 waiting[waiting_idx][0] = new_time_idx
                 track.ids.extend(frame_object.ids)

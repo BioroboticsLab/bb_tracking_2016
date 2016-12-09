@@ -438,7 +438,7 @@ class DataWrapperTruthPandas(DataWrapperPandas, DataWrapperTruth):
         detection_ids = detections[self.cols['id']].tolist()
         return Track(truth_id,
                      detection_ids,
-                     pd.to_datetime(detections[self.cols['timestamp']]).tolist(),
+                     detections[self.cols['timestamp']].tolist(),
                      meta={DETKEY: self.get_detections(detection_ids)})
 
     def get_truth_tracks(self, cam_id=None):

@@ -188,19 +188,14 @@ class Validator(object):
         Returns:
             :obj:`.ScoreMetrics`: :obj:`.ScoreMetrics` tuple with alignment information
         """
-        def to_timeformat(time_something):
-            """Helper to convert lists to a common time format."""
-            return pd.to_datetime(time_something, utc=True)
         assert len(set(track_test.timestamps)) == len(set(track_test.ids)), \
             "You might have duplicate timestamps in the test track."
         assert len(set(track_truth.timestamps)) == len(set(track_truth.ids)), \
             "You might have duplicate timestamps in the truth track."
 
         timestamps = self.cam_timestamps[cam_id] if cam_id is not None else self.timestamps
-        # we use only one timestamps format for comparison
-        timestamps = to_timeformat(timestamps)
-        timestamps_test = to_timeformat(track_test.timestamps)
-        timestamps_truth = to_timeformat(track_truth.timestamps)
+        timestamps_test = track_test.timestamps
+        timestamps_truth = track_truth.timestamps
         assert timestamps_test[0] >= timestamps[0], "Track is out of scope for ground truth data."
         assert timestamps_test[-1] <= timestamps[-1], "Track is out of scope for ground truth data."
 

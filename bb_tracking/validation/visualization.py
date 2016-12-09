@@ -26,11 +26,7 @@ def validate_plot(tracks, scores, validator, gap=0, cam_gap=True, metric_keys=No
         gap (int): the gap the algorithm should be capable to overcome
         cam_gap (bool): flag indicating that a camera switch is a insurmountable gap
         metric_keys (list): Iterable with metric keys that should be shown.
-<<<<<<< HEAD
-            Default is ``['detections', 'fragments', 'tracks']``.
-=======
             Default is ``['detections', 'fragments' 'tracks', 'truth_ids']``.
->>>>>>> 7b6f08c50dd64fdf0248e0472874ef113bf30acf
 
     Returns:
         tuple: tuple containing figure and axes object from matplotlib

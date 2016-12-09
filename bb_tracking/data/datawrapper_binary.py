@@ -11,7 +11,6 @@ or use :class:`.DataWrapperPandas`.
 """
 import numpy as np
 from scipy.spatial import cKDTree
-from bb_binary import to_datetime
 from .constants import CAMKEY, DETKEY, FRAMEIDXKEY, TRUTHKEY
 from .datastructures import Detection, Track
 from .datawrapper import DataWrapper, DataWrapperTruth
@@ -70,9 +69,8 @@ class DataWrapperBinary(DataWrapper):
                     "Only implemented for union type 'detectionsDP'!"
 
             # each frame has a different timestamp
-            timestamp = to_datetime(frame.timestamp)
-            cam_timestamps[cam_id].add(timestamp)
-            timestamps.add(timestamp)
+            cam_timestamps[cam_id].add(frame.timestamp)
+            timestamps.add(frame.timestamp)
             # now iterate through detections
             self._iterate_detections(frame, cam_id, meta_keys)
 
@@ -95,25 +93,26 @@ class DataWrapperBinary(DataWrapper):
                 as meta field in detections (detection fields defined in the *bb_binary* schema)
         """
         xy_cols = list()
-        timestamp = to_datetime(frame.timestamp)
-        self.frame_detections[(cam_id, timestamp)] = list()
+        self.frame_detections[(cam_id, frame.timestamp)] = list()
         # iterate through detections and make some data cleaning
         for detection in frame.detectionsUnion.detectionsDP:
             detection_id = 'f{}d{}c{}'.format(frame.id, detection.idx, cam_id)
             detection_tuple = Detection(
-                id=detection_id, timestamp=timestamp, x=detection.xpos, y=detection.ypos,
+                id=detection_id, timestamp=frame.timestamp, x=detection.xpos, y=detection.ypos,
                 orientation=0 if np.isinf(detection.zRotation) else detection.zRotation,
                 beeId=[x / 255. for x in detection.decodedId],
                 descriptor= detection.descriptor,
                 meta={mkey: getattr(detection, dkey) for dkey, mkey in meta_keys.items()})
             detection_tuple.meta[CAMKEY] = cam_id
+            assert detection_id not in self.detections_dict,\
+                "Duplicate key {}".format(detection_id)
             self.detections_dict[detection_id] = detection_tuple
-            self.frame_detections[(cam_id, timestamp)].append(detection_tuple)
+            self.frame_detections[(cam_id, frame.timestamp)].append(detection_tuple)
             xy_cols.append((detection.xpos, detection.ypos))
 
         # we might have frames without detections
         if len(xy_cols) > 0:
-            self.frame_trees[(cam_id, timestamp)] = cKDTree(xy_cols)
+            self.frame_trees[(cam_id, frame.timestamp)] = cKDTree(xy_cols)
 
     def get_camids(self, frame_object=None):
         if frame_object is None:
@@ -245,7 +244,7 @@ class DataWrapperTruthBinary(DataWrapperBinary, DataWrapperTruth):
     def _match_truth_with_pipeline(self, cam_id, frame, xy_cols, frame_truth_ids, radius):
         """Determine matching pairs of truth data and repository output."""
         # pylint:disable=too-many-arguments
-        frame_key = (cam_id, to_datetime(frame.timestamp))
+        frame_key = (cam_id, frame.timestamp)
         tree = self.frame_trees[frame_key]
         indices = tree.query_ball_tree(cKDTree(xy_cols), radius)
         for frame_detection_idx, xy_col_idxs in enumerate(indices):

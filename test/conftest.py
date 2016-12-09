@@ -27,7 +27,6 @@ import warnings
 import numpy as np
 import pandas as pd
 import pytest
-import pytz
 from bb_binary import build_frame_container, build_frame_container_from_df, Repository,\
     int_id_to_binary, binary_id_to_int, Frame
 from bb_tracking.data import Detection, Track, DataWrapperPandas, DataWrapperTruthPandas, \
@@ -92,7 +91,7 @@ def cmp_tracks(track1, track2, cmp_trackid=True):
         assert all(track_ids_equal)
     assert len(track1.timestamps) == len(track2.timestamps)
 
-    track_timestamps_equal = pd.to_datetime(track1.timestamps) == pd.to_datetime(track2.timestamps)
+    track_timestamps_equal = list(track1.timestamps) == list(track2.timestamps)
     if isinstance(track_timestamps_equal, bool):
         assert track_timestamps_equal
     else:
@@ -106,7 +105,7 @@ def detections():
     The data for this fixture is partly arbitrary so
     do **not** use it for verifying Algorithms!
     """
-    frame = pd.read_csv(PATH + 'detections.csv', parse_dates=['timestamp'], decimal=',')
+    frame = pd.read_csv(PATH + 'detections.csv', decimal=',')
     frame.beeID = frame.beeID.apply(parse_float_list)
     frame.descriptor = frame.descriptor.apply(parse_float_list)
     return frame
@@ -118,7 +117,7 @@ def detections_clean():
 
     The data for this fixture is partly arbitrary so do **not** use it for verifying Algorithms!
     """
-    frame = pd.read_csv(PATH + 'detections_clean.csv', parse_dates=['timestamp'], decimal=',')
+    frame = pd.read_csv(PATH + 'detections_clean.csv', decimal=',')
     frame.set_index('id', drop=False, inplace=True, verify_integrity=True)
     frame.beeID = frame.beeID.apply(parse_float_list)
     frame.descriptor = frame.descriptor.apply(parse_float_list)
@@ -182,7 +181,7 @@ def truth():
 
     The data for this fixture is partly arbitrary so do **not** use it for verifying Algorithms!
     """
-    frame = pd.read_csv(PATH + 'truth.csv', parse_dates=['timestamp'], decimal=',')
+    frame = pd.read_csv(PATH + 'truth.csv', decimal=',')
     return frame
 
 
@@ -192,7 +191,7 @@ def truth_clean():
 
     The data for this fixture is partly arbitrary so do **not** use it for verifying Algorithms!
     """
-    frame = pd.read_csv(PATH + 'truth_clean.csv', parse_dates=['timestamp'], decimal=',')
+    frame = pd.read_csv(PATH + 'truth_clean.csv', decimal=',')
     frame.set_index('id', drop=False, inplace=True, verify_integrity=True)
     frame.beeID = frame.beeID.apply(parse_float_list)
     frame.descriptor = frame.descriptor.apply(parse_float_list)
@@ -263,9 +262,7 @@ def data_tracks(data_binary, tracks_test, id_translator):
     The data for this fixture is partly arbitrary so do **not** use it for verifying Algorithms!
     """
     get_ids = id_translator(data_binary)
-    tracks = [Track(id=track.id, ids=get_ids(*track.ids),
-                    timestamps=[time.to_pydatetime().replace(tzinfo=pytz.utc)
-                                for time in track.timestamps],
+    tracks = [Track(id=track.id, ids=get_ids(*track.ids), timestamps=track.timestamps,
                     meta={DETKEY: data_binary.get_detections(get_ids(*track.ids))})
               for track in tracks_test]
     return DataWrapperTracks(tracks, data_binary.cam_timestamps, data=data_binary)
@@ -278,9 +275,7 @@ def data_tracks_no_detections(data_binary, tracks_test, id_translator):
     The data for this fixture is partly arbitrary so do **not** use it for verifying Algorithms!
     """
     get_ids = id_translator(data_binary)
-    tracks = [Track(id=track.id, ids=get_ids(*track.ids),
-                    timestamps=[time.to_pydatetime().replace(tzinfo=pytz.utc)
-                                for time in track.timestamps],
+    tracks = [Track(id=track.id, ids=get_ids(*track.ids), timestamps=track.timestamps,
                     meta={DETKEY: data_binary.get_detections(get_ids(*track.ids))})
               for track in tracks_test]
     return DataWrapperTracks(tracks, data_binary.cam_timestamps)
@@ -293,9 +288,7 @@ def data_tracks_truth(data_binary_truth, tracks_test, id_translator):
     The data for this fixture is partly arbitrary so do **not** use it for verifying Algorithms!
     """
     get_ids = id_translator(data_binary)
-    tracks = [Track(id=track.id, ids=get_ids(*track.ids),
-                    timestamps=[time.to_pydatetime().replace(tzinfo=pytz.utc)
-                                for time in track.timestamps],
+    tracks = [Track(id=track.id, ids=get_ids(*track.ids), timestamps=track.timestamps,
                     meta={DETKEY: data_binary_truth.get_detections(get_ids(*track.ids))})
               for track in tracks_test]
     return DataWrapperTruthTracks(tracks, data_binary_truth.cam_timestamps, data=data_binary_truth)
@@ -312,8 +305,7 @@ def data(request, data_pandas, data_pandas_truth, data_binary, data_binary_truth
             "binary_truth": data_binary_truth,
             "tracks": data_tracks,
             "tracks_nd": data_tracks_no_detections,
-            "tracks_truth": data_tracks_truth,
-            }[request.param]
+            "tracks_truth": data_tracks_truth}[request.param]
 
 
 @pytest.fixture(params=["pandas_truth", "binary_truth", "tracks_truth"])
@@ -321,8 +313,7 @@ def data_truth(request, data_pandas_truth, data_binary_truth, data_tracks_truth)
     """Fixture to run all implementations of DataWrapperTruth"""
     return {"pandas_truth": data_pandas_truth,
             "binary_truth": data_binary_truth,
-            "tracks_truth": data_tracks_truth,
-            }[request.param]
+            "tracks_truth": data_tracks_truth}[request.param]
 
 
 @pytest.fixture
@@ -362,15 +353,15 @@ def tracks_test(timestamps):
 
 @pytest.fixture
 def timestamps():
-    """Fixture for timestamps in pandas timestamp format."""
-    timestamps = (                                 # Index
-        pd.Timestamp("2016-04-01 15:17:00.1000"),  # 0
-        pd.Timestamp("2016-04-01 15:17:00.2000"),  # 1
-        pd.Timestamp("2016-04-01 15:17:00.3000"),  # 2
-        pd.Timestamp("2016-04-01 15:17:01.0000"),  # 3
-        pd.Timestamp("2016-04-01 15:17:01.1000"),  # 4
-        pd.Timestamp("2016-04-01 15:17:01.3000"),  # 5
-        pd.Timestamp("2016-04-01 15:17:02.0000")   # 6
+    """Fixture for timestamps as floats with microseconds."""
+    timestamps = (     # Index
+        1459516622.1,  # 0
+        1459516622.2,  # 1
+        1459516622.3,  # 2
+        1459516623.0,  # 3
+        1459516623.1,  # 4
+        1459516623.3,  # 5
+        1459516624.0,  # 6
     )
     return timestamps
 

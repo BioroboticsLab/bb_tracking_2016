@@ -69,7 +69,7 @@ def generate_learning_data(dw_truth, features, frame_diff, radius):
 
     learning_data = {key: list() for key in features.keys()}
     learning_target = list()
-    walker = SimpleWalker([], score_fun_learning, frame_diff, radius)
+    walker = SimpleWalker(dw_truth, score_fun_learning, frame_diff, radius)
     tracks = walker.calc_tracks()
 
     # just make sure that we correctly "tracked" the truth data

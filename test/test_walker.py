@@ -7,8 +7,9 @@ import pytest
 import six
 from scipy.spatial.distance import euclidean
 from bb_binary import binary_id_to_int
-from bb_tracking.data import Track
+from bb_tracking.data import DataWrapperTracks, Detection, Track
 from bb_tracking.data.constants import CAMKEY, DETKEY
+from bb_tracking.tracking import SimpleWalker
 
 
 def test_init_simple_walker(simple_walker, data_simple_tracking):
@@ -40,7 +41,7 @@ def test_calc_tracks():
 def test_calc_initialize(simple_walker, frame_objects_data):
     """Test the initialization of the waiting list."""
     frame_objects, time_index, timestamps, _ = frame_objects_data
-    new_waiting = simple_walker._calc_initialize(time_index, frame_objects, [])
+    new_waiting = simple_walker._calc_initialize(time_index, timestamps, frame_objects, [])
     ids = set()
     # test basic setup like last update and track properties
     for i, (last_update, track) in enumerate(new_waiting):
@@ -62,14 +63,14 @@ def test_calc_initialize(simple_walker, frame_objects_data):
 
     # test with track prefix
     simple_walker.track_prefix = "test_"
-    new_waiting = simple_walker._calc_initialize(time_index, frame_objects, [])
+    new_waiting = simple_walker._calc_initialize(time_index, timestamps, frame_objects, [])
     for _, track in new_waiting:
         assert isinstance(track.id, six.string_types)
         assert "test_" in track.id
 
     # test other types
     with pytest.raises(TypeError) as excinfo:
-        simple_walker._calc_initialize(time_index, [0, 1, 2], [])
+        simple_walker._calc_initialize(time_index, timestamps, [0, 1, 2], [])
     assert str(excinfo.value) == "Type {} not supported.".format(type(1))
 
 
@@ -130,7 +131,7 @@ def setup_for_assignment(simple_walker, object_type=DETKEY, time_idx=1):
     detections = simple_walker.data.get_frame_objects(cam_id=cam_id,
                                                       timestamp=timestamps[time_idx - 1])
 
-    waiting = simple_walker._calc_initialize(0, detections, [])
+    waiting = simple_walker._calc_initialize(0, timestamps, detections, [])
     frame_objects = simple_walker.data.get_frame_objects(cam_id=cam_id,
                                                          timestamp=timestamps[time_idx])
     if object_type == 'tracks':
@@ -245,8 +246,6 @@ def test_calc_assign(simple_walker, detections_simple_tracking, object_type):
         if len(truth_track.ids) > 1 and timestamp == timestamps[time_idx]:
             expected_assigned.add(detection.id)
             waiting_expected[waiting_idx][0] = time_idx
-            if object_type == "tracks":
-                waiting_expected[waiting_idx][0] += 1
             track.ids.append(detection.id)
             track.timestamps.append(timestamp)
             track.meta[DETKEY].append(detection)
@@ -262,3 +261,39 @@ def test_calc_assign(simple_walker, detections_simple_tracking, object_type):
     with pytest.raises(TypeError) as excinfo:
         simple_walker._calc_assign(cam_id, time_idx, timestamp, timestamps, [1, 2, 3], waiting)
     assert str(excinfo.value) == "Type {} not supported.".format(type(1))
+
+
+def test_special_datawrappertracks():
+    """Test some special handling for :class:`DataWrapperTracks`.
+
+    This test will combine try to combine three fragments that have a gap of 1 and 2 between.
+    """
+    track_id = "track_id"
+    n = 10
+    ids = list(range(n))
+    tstamps = list(range(n))
+    detections = [Detection(id=ids[i], x=i, y=i, timestamp=tstamps[i], orientation=i, beeId=i,
+                            meta={CAMKEY: 0}) for i in range(n)]
+    track1 = Track(id=1, ids=ids[0:2], timestamps=tstamps[0:2], meta={DETKEY: detections[0:2],
+                                                                      track_id: 0})
+    track2 = Track(id=2, ids=ids[3:6], timestamps=tstamps[3:6], meta={DETKEY: detections[3:6],
+                                                                      track_id: 0})
+    track3 = Track(id=3, ids=ids[9:10], timestamps=tstamps[8:10], meta={DETKEY: detections[8:10],
+                                                                        track_id: 0})
+    dw_tracks = DataWrapperTracks([track1, track2, track3], {0: tstamps})
+
+    def score_fun(tracks1, tracks2):
+        """Helper to perform scoring in test tracking."""
+        weights = []
+        for track1, track2 in zip(tracks1, tracks2):
+            if track1.meta[track_id] == track2.meta[track_id]:
+                weights.append(-1)
+            else:
+                weights.append(1)
+        return weights
+
+    # increment frame_diff with each try and expect one fragment less
+    for i in range(3):
+        walker = SimpleWalker(dw_tracks, score_fun, i + 1, np.inf)
+        result_tracks = walker.calc_tracks()
+        assert len(result_tracks) == 3 - i

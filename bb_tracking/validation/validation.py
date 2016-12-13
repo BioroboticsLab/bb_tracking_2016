@@ -54,7 +54,7 @@ class Validator(object):
                     break
         return tracks_clean
 
-    def sanity_check(self, tracks, cam_gap=True):
+    def sanity_check(self, tracks, gap=None, cam_gap=True):
         """Performs some sanity checks on tracks.
 
         The following checks are performed:
@@ -70,6 +70,7 @@ class Validator(object):
             tracks (:obj:`list` of :obj:`.Track`): iterable structure with :obj:`.Track`.
 
         Keyword Arguments:
+            gap (int): the gap the algorithm should be capable to overcome
             cam_gap (bool): flag indicating that a camera switch is a insurmountable gap
 
         Returns:
@@ -99,6 +100,11 @@ class Validator(object):
             assigned_ids |= track_detection_ids
             if track_detection_ids <= false_positives:
                 track.meta[FPKEY] = True
+            if gap is not None and len(track.timestamps) > 1:
+                tidx = [list(self.timestamps).index(tstamp) for tstamp in track.timestamps]
+                track_gap = max(j - i for i, j in zip(tidx, tidx[1:])) - 1
+                assert track_gap <= gap,\
+                    "The max gap in track {} is {} > {}.".format(track.id, track_gap, gap)
             if cam_gap:
                 assert len(self.truth.get_camids(frame_object=track)) == 1, \
                     "Track {} has detection ids from multiple cameras.".format(track.id)
@@ -142,7 +148,7 @@ class Validator(object):
 
         # just make sure everything is all right
         if check:
-            self.sanity_check(tracks, cam_gap=cam_gap)
+            self.sanity_check(tracks, gap=gap, cam_gap=cam_gap)
         # we do not score false positives
         tracks = self.remove_false_positives(tracks)
         truth = self.truth

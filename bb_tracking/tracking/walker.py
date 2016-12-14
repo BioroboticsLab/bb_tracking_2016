@@ -304,7 +304,7 @@ class SimpleWalker(object):
 
         waiting_indices, fo_indices, tracks_path, fo_test = [], [], [], []
         for i, (track_time_idx, track_path) in enumerate(waiting):
-            if track_time_idx > time_idx:
+            if track_time_idx >= time_idx:
                 continue
             neighbors = self.data.get_neighbors(track_path, cam_id,
                                                 radius=self.radius, timestamp=tstamp)

@@ -450,7 +450,16 @@ def calc_track_ids(tracks):
     return bit_array_to_int_v(calc_median_ids(tracks))
 
 
-def confidency_id_sim_v(tracks1, tracks2):
+def confidence_id_sim_v(tracks1, tracks2):
+    """Compares id confidence of tracks (version 1)
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :obj:`np.array`: difference between mean confidence in the tracks
+        """
     arr1conf, arr2conf = [], []
     for track1, track2 in zip(tracks1, tracks2):
         arr1 = np.array([det.beeId for det in track1.meta[DETKEY]])
@@ -462,7 +471,16 @@ def confidency_id_sim_v(tracks1, tracks2):
     return np.fabs(np.array(arr1conf) - np.array(arr2conf))
 
 
-def confidency_id_sim_v2(tracks1, tracks2):
+def confidence_id_sim_v2(tracks1, tracks2):
+    """Compares id confidency of tracks (version 2)
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :obj:`np.array`: difference between mean confidence in the tracks
+        """
     idconf = []
     for track1, track2 in zip(tracks1, tracks2):
         arr1 = np.array([det.beeId for det in track1.meta[DETKEY]])
@@ -474,20 +492,25 @@ def confidency_id_sim_v2(tracks1, tracks2):
     return idconf
 
 
-def short_confidency_id_sim_v2(tracks1, tracks2):
-    """Only take the last and first elements of tracks"""
-    window = 2
+def short_confidence_id_sim_v(tracks1, tracks2):
+    """Compares id confidence of last detections in tracks1 and first detections in tracks2
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :obj:`np.array`: difference between confidence values of the detections
+        """
     idconf = []
     for track1, track2 in zip(tracks1, tracks2):
-        length = min(window, len(track1.timestamps), len(track2.timestamps))
+        length = min(2, len(track1.timestamps), len(track2.timestamps))
         arr1 = np.array([det.beeId for det in track1.meta[DETKEY][-length:]])
         arr2 = np.array([det.beeId for det in track2.meta[DETKEY][:length]])
         idconf.append(math.fabs((np.mean(np.min(np.abs(0.5 - arr1) * 2, axis=1))) -
                                 (np.mean(np.min(np.abs(0.5 - arr2) * 2, axis=1)))))
     return idconf
 
-
-# UNPERFORMANT THINGS
 
 # Geschwindigkeiten der Biene
 def tempo(tracks1, tracks2):
@@ -660,12 +683,11 @@ def gap_speed(tracks1, tracks2):
 
         timedif = (det2.timestamp - det1.timestamp)
         # make sure we won't divide by zero
-        #assert timedif > 0
+        # assert timedif > 0
         if (timedif == 0):
             print(det1.id)
             print(det2.id)
             return
-
 
         placedif = math.sqrt((det2.x - det1.x) ** 2 + (det2.y - det1.y) ** 2)
         dif = placedif / timedif

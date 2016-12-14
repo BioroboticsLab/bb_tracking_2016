@@ -481,15 +481,15 @@ def confidence_id_sim_v2(tracks1, tracks2):
         Returns:
             :obj:`np.array`: difference between mean confidence in the tracks
         """
-    idconf = []
+    scores = []
     for track1, track2 in zip(tracks1, tracks2):
         arr1 = np.array([det.beeId for det in track1.meta[DETKEY]])
         arr2 = np.array([det.beeId for det in track2.meta[DETKEY]])
 
-        idconf.append(math.fabs((np.mean(np.min(np.abs(0.5 - arr1) * 2, axis=1))) -
+        scores.append(math.fabs((np.mean(np.min(np.abs(0.5 - arr1) * 2, axis=1))) -
                                 (np.mean(np.min(np.abs(0.5 - arr2) * 2, axis=1)))))
 
-    return idconf
+    return scores
 
 
 def short_confidence_id_sim_v(tracks1, tracks2):
@@ -502,43 +502,30 @@ def short_confidence_id_sim_v(tracks1, tracks2):
         Returns:
             :obj:`np.array`: difference between confidence values of the detections
         """
-    idconf = []
+    scores = []
     for track1, track2 in zip(tracks1, tracks2):
         length = min(2, len(track1.timestamps), len(track2.timestamps))
         arr1 = np.array([det.beeId for det in track1.meta[DETKEY][-length:]])
         arr2 = np.array([det.beeId for det in track2.meta[DETKEY][:length]])
-        idconf.append(math.fabs((np.mean(np.min(np.abs(0.5 - arr1) * 2, axis=1))) -
+        scores.append(math.fabs((np.mean(np.min(np.abs(0.5 - arr1) * 2, axis=1))) -
                                 (np.mean(np.min(np.abs(0.5 - arr2) * 2, axis=1)))))
-    return idconf
-
-
-# Geschwindigkeiten der Biene
-def tempo(tracks1, tracks2):
-    scores = []
-    for track1, track2 in zip(tracks1, tracks2):
-
-        if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
-            scores.append(-1.0)  # ein punkt hat keine geschwindigkeit!
-        else:
-            speed1 = calculate_speed(track1)
-            assert np.all(np.isfinite(speed1))
-
-            speed2 = calculate_speed(track2)
-            assert np.all(np.isfinite(speed2))
-
-            scores.append(math.fabs(speed1 - speed2))
     return scores
 
 
-# hilfsfunktion
 def calculate_speed(track):
-    # track length to divide the total distance by
+    """Helper to calculate the average speed of a given track.
+
+        Arguments:
+            track(:obj:`.Track`): A given Tracks
+
+        Returns:
+            float:: total distance between all detections per total time of the track
+    """
     start = track.meta[DETKEY][0].timestamp
     end = track.meta[DETKEY][-1].timestamp
 
     length = (end - start)
-
-    assert length > 0  # cause we don't want to divide by zero
+    assert length > 0 , "Start and end time are the same."
 
     # we start with the first detection
     startpoint = (track.meta[DETKEY][0].x, track.meta[DETKEY][0].y)
@@ -552,6 +539,36 @@ def calculate_speed(track):
         startpoint = currentpoint
 
     return eucl / length
+
+
+def speed_diff(tracks1, tracks2):
+    """Compares the average speed of the tracks
+
+            Arguments:
+                tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+                tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+            Returns:
+                :obj:`list`: difference between speed
+    """
+    scores = []
+    for track1, track2 in zip(tracks1, tracks2):
+
+        # If one of the tracks consists only of one detection, we have a point
+        # A point does not have a speed, so we append a non-existing value
+        if len(track1.timestamps) < 2 or len(track2.timestamps) < 2:
+            scores.append(-1.0)
+        else:
+            speed1 = calculate_speed(track1)
+            assert np.all(np.isfinite(speed1)), "In speed of track 1, a division by zero has " \
+                                                "occured"
+
+            speed2 = calculate_speed(track2)
+            assert np.all(np.isfinite(speed2)), "In speed of track 2, a division by zero has " \
+                                                "occured"
+
+            scores.append(math.fabs(speed1 - speed2))
+    return scores
 
 
 # Bei den Vektorlängen macht es schon Sinn, dass einer der Vektoren Null sein kann.

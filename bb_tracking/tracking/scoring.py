@@ -450,28 +450,6 @@ def calc_track_ids(tracks):
     return bit_array_to_int_v(calc_median_ids(tracks))
 
 
-# Features for the tracks
-# Feature, um die id-simularity zu scoren
-def score_track_id_sim(tracks1, tracks2):
-    scores = []
-    for track1, track2 in zip(tracks1, tracks2):
-        arr1 = np.array([det.beeId for det in track1.meta[DETKEY]])
-        arr2 = np.array([det.beeId for det in track2.meta[DETKEY]])
-        scores.append(score_id_sim(np.median(arr1, axis=0), np.median(arr2, axis=0)))
-    return scores
-
-
-# Feature, um die id-simularity um die Lücke herum zu scoren
-def score_track_id_sim_window(tracks1, tracks2):
-    window = 2
-    scores = []
-    for track1, track2 in zip(tracks1, tracks2):
-        arr1 = np.array([det.beeId for det in track1.meta[DETKEY][-window:]])
-        arr2 = np.array([det.beeId for det in track2.meta[DETKEY][:window]])
-        scores.append(score_id_sim(np.median(arr1, axis=0), np.median(arr2, axis=0)))
-    return scores
-
-
 def confidency_id_sim_v(tracks1, tracks2):
     arr1conf, arr2conf = [], []
     for track1, track2 in zip(tracks1, tracks2):
@@ -682,7 +660,12 @@ def gap_speed(tracks1, tracks2):
 
         timedif = (det2.timestamp - det1.timestamp)
         # make sure we won't divide by zero
-        assert timedif > 0
+        #assert timedif > 0
+        if (timedif == 0):
+            print(det1.id)
+            print(det2.id)
+            return
+
 
         placedif = math.sqrt((det2.x - det1.x) ** 2 + (det2.y - det1.y) ** 2)
         dif = placedif / timedif

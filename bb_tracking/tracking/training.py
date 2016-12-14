@@ -37,6 +37,7 @@ def generate_learning_data(dw_truth, features, frame_diff, radius):
             - **tracks** (:obj:`list` of :obj:`.Track`): list of tracks generated while generating
                 learning data.
     """
+    # pylint:disable=too-many-locals
     def score_fun_learning(tracks_path, frame_objects_test):
         """Scoring function that fills ``learning_data`` and ``learning_target`` for classifier.
 
@@ -55,7 +56,7 @@ def generate_learning_data(dw_truth, features, frame_diff, radius):
         for track_path, frame_object_test in zip(tracks_path, frame_objects_test):
             truth_path = dw_truth.get_truthid(track_path)
             truth_test = dw_truth.get_truthid(frame_object_test)
-            if truth_path is None and truth_test is None:  # pragma: no cover
+            if truth_path == dw_truth.fp_id and truth_test == dw_truth.fp_id:  # pragma: no cover
                 # avoid accidentally learning from False Positive Tracks
                 weights.append(np.inf)
                 learning_target.append(-1)
@@ -70,8 +71,14 @@ def generate_learning_data(dw_truth, features, frame_diff, radius):
     learning_data = {key: list() for key in features.keys()}
     learning_target = list()
     walker = SimpleWalker(dw_truth, score_fun_learning, frame_diff, radius)
-    tracks = walker.calc_tracks()
+    tracks = [track for track in walker.calc_tracks()
+              if dw_truth.get_truthid(track) is not dw_truth.fp_id]
 
+    # test for false positives
+    all_truth_ids = set()
+    for track in tracks:
+        all_truth_ids |= dw_truth.get_truthids(frame_object=track)
+    assert dw_truth.fp_id not in all_truth_ids, "There are false positives in the learning data!"
     # just make sure that we correctly "tracked" the truth data
     scores = convert_validated_to_pandas(
         Validator(dw_truth).validate(
@@ -79,7 +86,9 @@ def generate_learning_data(dw_truth, features, frame_diff, radius):
     # remove scores with deletes for track training: we have missing fragments in the test data
     if isinstance(dw_truth, DataWrapperTracks):
         scores = scores[scores.deletes == 0]
-    assert np.all(scores.inserts == 0) and np.all(scores.deletes == 0) and np.all(scores.value >= 1)
+    assert (np.all(scores.inserts == 0) and
+            np.all(scores.deletes == 0) and
+            np.all(scores.value >= 1)), "The learning data contains errors!"
 
     x_data = np.array([learning_data[key] for key in features.keys()]).T
     y_data = np.array(learning_target)

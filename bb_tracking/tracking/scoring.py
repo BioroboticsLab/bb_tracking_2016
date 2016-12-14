@@ -519,7 +519,7 @@ def calculate_speed(track):
             track(:obj:`.Track`): A given Tracks
 
         Returns:
-            float:: total distance between all detections per total time of the track
+            float: total distance between all detections per total time of the track
     """
     start = track.meta[DETKEY][0].timestamp
     end = track.meta[DETKEY][-1].timestamp
@@ -549,7 +549,7 @@ def speed_diff(tracks1, tracks2):
                 tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
 
             Returns:
-                :obj:`list`: difference between speed
+                :(:obj:`list` of float: difference between speed
     """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
@@ -571,17 +571,23 @@ def speed_diff(tracks1, tracks2):
     return scores
 
 
-# Bei den Vektorlängen macht es schon Sinn, dass einer der Vektoren Null sein kann.
-# Dann hat sich die Biene halt nicht bewegt
-# Betrachtet die Differenz in den X-Vektoren der letzten 2 und der ersten 2 Detektionen
-# der beiden Tracks
 def x_vectors(tracks1, tracks2):
+    """Compares the last move from track 1 with the first one from track 2 on the x-axis
+
+            Arguments:
+                tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+                tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+            Returns:
+                :obj:`list` of float: absolute difference between x-movements
+            """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
-        if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
-            scores.append(
-                -1.0)  # wir können keine Vektoren und Punkte vergleichen. hänge unmöglichen wert an
+        # If one of the tracks consists only of one detection, we have a point
+        # Comparing a point and a vector is useless, so we append a non-existing value
+        if len(track1.timestamps) < 2 or len(track2.timestamps) < 2:
+            scores.append(-1.0)
         else:
             detvorend = track1.meta[DETKEY][-2]
             detend = track1.meta[DETKEY][-1]
@@ -592,15 +598,14 @@ def x_vectors(tracks1, tracks2):
             start = detend2.x - detvorend2.x
 
             # runterbrechen auf die Zeitänderung
-            timedif1 = (detend.timestamp - detvorend.timestamp)
-            timedif2 = (detend2.timestamp - detvorend2.timestamp)
+            time_diff1 = (detend.timestamp - detvorend.timestamp)
+            time_diff2 = (detend2.timestamp - detvorend2.timestamp)
 
-            # make sure we won't divide by zero
-            assert timedif1 > 0
-            assert timedif2 > 0
+            assert time_diff1 > 0, "Start and end time are the same."
+            assert time_diff2 > 0, "Start and end time are the same."
 
-            vektor1 = end / timedif1
-            vektor2 = start / timedif2
+            vektor1 = end / time_diff1
+            vektor2 = start / time_diff2
 
             assert np.all(np.isfinite(vektor1))
             assert np.all(np.isfinite(vektor2))

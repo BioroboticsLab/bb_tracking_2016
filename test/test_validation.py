@@ -51,6 +51,13 @@ def test_sanity_check(validator, id_translator):
     with pytest.raises(AssertionError) as excinfo:
         validator.sanity_check((Track(id=1, ids=get_ids(1, 2), timestamps=[2, 1], meta={}), ))
     assert "Timestamps in track 1 not in order." in str(excinfo.value)
+    # gap bigger than expected
+    with pytest.raises(AssertionError) as excinfo:
+        validator.sanity_check((Track(id=1, ids=get_ids(1, 2),
+                                      timestamps=[validator.timestamps[1], validator.timestamps[3]],
+                                      meta={}), ),
+                               gap=0)
+    assert str(excinfo.value) == "The max gap in track 1 is 1 > 0."
     # duplicate track ids
     with pytest.raises(AssertionError) as excinfo:
         tracks = (Track(id=1, ids=get_ids(1, 3), timestamps=[1, 2], meta={}),

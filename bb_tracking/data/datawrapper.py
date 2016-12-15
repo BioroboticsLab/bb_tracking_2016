@@ -174,7 +174,7 @@ class DataWrapperTruth(DataWrapper):
                 of the :obj:`.Detection` so extract the truth id from
 
         Returns:
-            int or str: the truth id for the `frame_object` or :obj:`None`
+            int or str: the truth id for the `frame_object` or :attr:`fp_id`
             if `frame_object` is a false positive
         """
         raise NotImplementedError()

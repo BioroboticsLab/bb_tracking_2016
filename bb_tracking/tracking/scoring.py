@@ -544,12 +544,12 @@ def calculate_speed(track):
 def speed_diff(tracks1, tracks2):
     """Compares the average speed of the tracks
 
-            Arguments:
-                tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
-                tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
 
-            Returns:
-                :(:obj:`list` of float: difference between speed
+        Returns:
+            :(:obj:`list` of float: difference between speed
     """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
@@ -574,13 +574,13 @@ def speed_diff(tracks1, tracks2):
 def x_vectors(tracks1, tracks2):
     """Compares the last move from track 1 with the first one from track 2 on the x-axis
 
-            Arguments:
-                tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
-                tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
 
-            Returns:
-                :obj:`list` of float: absolute difference between x-movements
-            """
+        Returns:
+            :obj:`list` of float: absolute difference between x-movements
+    """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
@@ -589,147 +589,176 @@ def x_vectors(tracks1, tracks2):
         if len(track1.timestamps) < 2 or len(track2.timestamps) < 2:
             scores.append(-1.0)
         else:
-            detvorend = track1.meta[DETKEY][-2]
-            detend = track1.meta[DETKEY][-1]
-            detvorend2 = track2.meta[DETKEY][0]
-            detend2 = track2.meta[DETKEY][1]
+            det1_front = track1.meta[DETKEY][-2]
+            det1_back = track1.meta[DETKEY][-1]
+            det2_front = track2.meta[DETKEY][0]
+            det2_back = track2.meta[DETKEY][1]
 
-            end = detend.x - detvorend.x
-            start = detend2.x - detvorend2.x
+            x_vector1 = det1_back.x - det1_front.x
+            x_vector2 = det2_back.x - det2_front.x
 
             # runterbrechen auf die Zeitänderung
-            time_diff1 = (detend.timestamp - detvorend.timestamp)
-            time_diff2 = (detend2.timestamp - detvorend2.timestamp)
+            time_diff1 = (det1_back.timestamp - det1_front.timestamp)
+            time_diff2 = (det2_back.timestamp - det2_front.timestamp)
 
             assert time_diff1 > 0, "Start and end time are the same."
             assert time_diff2 > 0, "Start and end time are the same."
 
-            vektor1 = end / time_diff1
-            vektor2 = start / time_diff2
+            vector1 = x_vector1 / time_diff1
+            vector2 = x_vector2 / time_diff2
 
-            assert np.all(np.isfinite(vektor1))
-            assert np.all(np.isfinite(vektor2))
+            assert np.all(np.isfinite(vector1))
+            assert np.all(np.isfinite(vector2))
 
-            dif = math.fabs(
-                vektor1 - vektor2)  # kein, räumliche änderung egal in welche richtung
-            scores.append(dif)
+            diff = math.fabs(vector1 - vector2)
+            scores.append(diff)
 
     return scores
 
 
-# Betrachtet die Differenz in den Y-Vektoren der letzten 2 und der ersten
-# 2 Detektionen der beiden Tracks
 def y_vectors(tracks1, tracks2):
+    """Compares the last move from track 1 with the first one from track 2 on the y-axis
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :obj:`list` of float: absolute difference between y-movements
+    """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
+        # If one of the tracks consists only of one detection, we have a point
+        # Comparing a point and a vector is useless, so we append a non-existing value
         if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
-            scores.append(
-                -1.0)  # wir können keine Vektoren und Punkte vergleichen. hänge unmöglichen wert an
+            scores.append(-1.0)
         else:
 
-            detvorend = track1.meta[DETKEY][-2]
-            detend = track1.meta[DETKEY][-1]
-            detvorend2 = track2.meta[DETKEY][0]
-            detend2 = track2.meta[DETKEY][1]
+            det1_front = track1.meta[DETKEY][-2]
+            det1_back = track1.meta[DETKEY][-1]
+            det2_front = track2.meta[DETKEY][0]
+            det2_back = track2.meta[DETKEY][1]
 
-            end = detend.y - detvorend.y
-            start = detend2.y - detvorend2.y
+            y_vector1 = det1_back.y - det1_front.y
+            y_vector2 = det2_back.y - det2_front.y
 
-            # runterbrechen auf die Zeitänderung
-            timedif1 = (detend.timestamp - detvorend.timestamp)
-            timedif2 = (detend2.timestamp - detvorend2.timestamp)
+            time_diff1 = (det1_back.timestamp - det1_front.timestamp)
+            time_diff2 = (det2_back.timestamp - det2_front.timestamp)
 
             # make sure we won't divide by zero
-            assert timedif1 > 0
-            assert timedif2 > 0
+            assert time_diff1 > 0
+            assert time_diff2 > 0
 
-            vektor1 = end / timedif1
-            vektor2 = start / timedif2
+            vector1 = y_vector1 / time_diff1
+            vector2 = y_vector2 / time_diff2
 
-            assert np.all(np.isfinite(vektor1))
-            assert np.all(np.isfinite(vektor2))
+            assert np.all(np.isfinite(vector1))
+            assert np.all(np.isfinite(vector2))
 
-            dif = math.fabs(vektor1 - vektor2)
-            scores.append(dif)
+            diff = math.fabs(vector1 - vector2)
+            scores.append(diff)
 
     return scores
 
 
-# Betrachtet die Differenz in den Vektoren der letzten 2 und der
-# ersten 2 Detektionen der beiden Tracks
-def xy_vector(tracks1, tracks2):
+def xy_vectors(tracks1, tracks2):
+    """Compares the last move from track 1 with the first one from track 2 on the both axis
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :obj:`list` of float: absolute difference between both vector length
+    """
     scores = []
 
     for track1, track2 in zip(tracks1, tracks2):
 
+        # If one of the tracks consists only of one detection, we have a point
+        # Comparing a point and a vector is useless, so we append a non-existing value
         if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
-            scores.append(
-                -1.0)  # wir können keine Vektoren und Punkte vergleichen. hänge unmöglichen wert an
+            scores.append(-1.0)
         else:
 
-            detvorend = track1.meta[DETKEY][-2]
-            detend = track1.meta[DETKEY][-1]
+            det1_front = track1.meta[DETKEY][-2]
+            det1_back = track1.meta[DETKEY][-1]
+            det2_front = track2.meta[DETKEY][0]
+            det2_back = track2.meta[DETKEY][1]
 
-            timedif1 = (detend.timestamp - detvorend.timestamp)
-
-            detvorend2 = track2.meta[DETKEY][0]
-            detend2 = track2.meta[DETKEY][1]
-            timedif2 = (detend2.timestamp - detvorend2.timestamp)
+            time_diff1 = (det1_back.timestamp - det1_front.timestamp)
+            time_diff2 = (det2_back.timestamp - det2_front.timestamp)
 
             # make sure we won't divide by zero
-            assert timedif1 > 0
-            assert timedif2 > 0
+            assert time_diff1 > 0
+            assert time_diff2 > 0
 
             # Berechne die Vektoren zwischen den Detektionen
-            vector1 = np.asarray([detend.x - detvorend.x, detend.y - detvorend.y])
-            vector2 = np.asarray([detend2.x - detvorend2.x, detend2.y - detvorend2.y])
+            vector1 = np.asarray([det1_back.x - det1_front.x, det1_back.y - det1_front.y])
+            vector2 = np.asarray([det2_back.x - det2_front.x, det2_back.y - det2_front.y])
 
-            normalized_vector1 = vector1 / timedif1
-            normalized_vector2 = vector2 / timedif2
+            normalized_vector1 = vector1 / time_diff1
+            normalized_vector2 = vector2 / time_diff2
 
             # Betrachte den Unterschied der Vektorlängen
-            eucl1 = np.linalg.norm(normalized_vector1 - normalized_vector2)
-            scores.append(eucl1)
+            length_diff = np.linalg.norm(normalized_vector1 - normalized_vector2)
+            scores.append(length_diff)
 
     return scores
 
 
-# Setzt Zeit- und Ortsdistanz zwischen letzter Detektion des ersten Tracks
-# und erster des zweiten Tracks in Relation
 def gap_speed(tracks1, tracks2):
+    """Combines the features time_diff and distance by normalizing the distance between the last
+    detection of the first track and the first detection of the second track with the time that
+    collapsed between these detections
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :obj:`list` of float: distance per time
+    """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
         det1 = track1.meta[DETKEY][-1]
         det2 = track2.meta[DETKEY][0]
 
-        timedif = (det2.timestamp - det1.timestamp)
+        time_diff = (det2.timestamp - det1.timestamp)
+
         # make sure we won't divide by zero
-        # assert timedif > 0
-        if (timedif == 0):
-            print(det1.id)
-            print(det2.id)
-            return
+        assert time_diff > 0, "The detections come from the same frame."
 
-        placedif = math.sqrt((det2.x - det1.x) ** 2 + (det2.y - det1.y) ** 2)
-        dif = placedif / timedif
+        distance = math.sqrt((det2.x - det1.x) ** 2 + (det2.y - det1.y) ** 2)
+        normalized_distance = distance / time_diff
 
-        assert np.all(np.isfinite(dif))
+        assert np.all(np.isfinite(normalized_distance))
 
-        scores.append(dif)
+        scores.append(normalized_distance)
 
     return scores
 
 
-# Berechne die Differenz der Größe der Quadrate, auf denen sich die Biene
-# während des Tracks bewegt (pro Zeiteinheit)
-def movement_radius(tracks1, tracks2):
+def movement_area(tracks1, tracks2):
+    """Calculates the movement area for both tracks (movement area = the rectangle where a track
+    takes place, calculated by the difference of the highest and lowest x and y position of any
+    Detection in the Track). Then the area is normalized by the time that collapses during the
+    track and finally the values for both tracks are subtracted.
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :obj:`list` of float: difference between movement areas of the tracks
+    """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
+        #It is not useful to compare the areas if one of the track only consists of one detection
         if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
-            scores.append(
-                -1.0)  # wir können keine Vektoren und Punkte vergleichen. hänge unmöglichen wert an
+            scores.append(-1.0)
         else:
 
             points1 = np.asarray([[det.x, det.y] for det in track1.meta[DETKEY]])
@@ -748,52 +777,70 @@ def movement_radius(tracks1, tracks2):
             square1 = (maxx - minx) * (maxy - miny)
             square2 = (maxx2 - minx2) * (maxy2 - miny2)
 
-            # falls die Biene sich nicht bewegt, ist ihr Radius eben Null, kein Problem
-
-            # Bestimme die kompletten Zeitfenster, auf denen sich der Track bewegt
-            timedif1 = (track1.meta[DETKEY][-1].timestamp - track1.meta[DETKEY][0].timestamp)
-            timedif2 = (track2.meta[DETKEY][-1].timestamp - track2.meta[DETKEY][0].timestamp)
+            # Time collapsed from beginning of the track until the end
+            time_diff1 = (track1.meta[DETKEY][-1].timestamp - track1.meta[DETKEY][0].timestamp)
+            time_diff2 = (track2.meta[DETKEY][-1].timestamp - track2.meta[DETKEY][0].timestamp)
 
             # make sure we won't divide by zero
-            assert timedif1 > 0
-            assert timedif2 > 0
+            assert time_diff1 > 0
+            assert time_diff2 > 0
 
-            result1 = (square1 / (timedif1))
-            result2 = square2 / (timedif2)
+            result1 = square1 / time_diff1
+            result2 = square2 / time_diff2
 
-            # nimm die Differenz der Bewegungsradien
+            # Append the difference between the areas
             scores.append(math.fabs(result1 - result2))
-
-            # oder nimm die verhältnismäßigen Größen
-            # if result2<=result1:
-            # scores.append(math.fabs(result2/result1))
-            # else:
-            # scores.append(math.fabs(result1/result2))
 
     return scores
 
 
 def len_dif(tracks1, tracks2):
+    """Compares the length of track1 and track2
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :int: absolute length difference between both tracks
+    """
     scores = []
+
     for track1, track2 in zip(tracks1, tracks2):
-        lendif = math.fabs(len(track1.timestamps) - len(track2.timestamps))
-        scores.append(lendif)
+        len_diff = math.fabs(len(track1.timestamps) - len(track2.timestamps))
+        scores.append(len_diff)
     return scores
 
 
 def len_quot(tracks1, tracks2):
+    """Compares the length of track1 and track2
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :float: length of track1 divided by length of track2
+    """
     scores = []
+
     for track1, track2 in zip(tracks1, tracks2):
-        lenquot = math.fabs(len(track2.timestamps) / len(track1.timestamps))
-
-        assert np.all(np.isfinite(lenquot))
-
-        scores.append(lenquot)
+        len_quot = math.fabs(len(track2.timestamps) / len(track1.timestamps))
+        assert np.all(np.isfinite(len_quot))
+        scores.append(len_quot)
     return scores
 
 
-# meine implementierung, in der die verstrichene Zeit eine Rolle spielt
 def distance_orientations_per_time(detections1, detections2, meta_key=None):
+    """Combines features distance_orientations and time_diff
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :float: distance orientation normalized by time
+    """
     assert len(detections1) == len(detections2), \
         "Both detection lists should have the same size"
 
@@ -813,29 +860,42 @@ def distance_orientations_per_time(detections1, detections2, meta_key=None):
 
     dist_per_time = distance / time_difs
 
-    # assert np.all(np.isfinite(dist_per_time))
+    assert np.all(np.isfinite(dist_per_time))
     return dist_per_time
 
 
-def foreward_error(tracks1, tracks2):
+def forward_error(tracks1, tracks2):
+    """Calculates the bee's movement in the last two detections of track1 and forecasts where
+    the bee is expected to be by the time track2 begins
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :float: difference between expected and real location of first detection in track2
+    """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
+        # If there is only one detection, we cannot predict a movement
         if (len(track1.timestamps) < 2):
-            scores.append(-1.0)  # wert, der niemals vorkommen könnte
+            scores.append(-1.0)
         else:
-            det1v = track1.meta[DETKEY][-2]
-            det1h = track1.meta[DETKEY][-1]
+            det1_front = track1.meta[DETKEY][-2]
+            det1_back = track1.meta[DETKEY][-1]
             det2 = track2.meta[DETKEY][0]
 
-            vector = np.asarray([det1h.x - det1v.x, det1h.y - det1v.y])
-            timedif = (det1h.timestamp - det1v.timestamp)
-            move_per_time = vector / timedif
+            vector = np.asarray([det1_back.x - det1_front.x, det1_back.y - det1_front.y])
+            time_diff = (det1_back.timestamp - det1_front.timestamp)
+            # make sure we won't divide by zero
+            assert time_diff > 0, "The detections come from the same frame."
+            move_per_time = vector / time_diff
 
-            time_between_tracks = (det2.timestamp - det1h.timestamp)
+            time_between_tracks = (det2.timestamp - det1_back.timestamp)
             predicted_vector = move_per_time * time_between_tracks
 
-            predicted_point = np.asarray([det1h.x, det1h.y]) + predicted_vector
+            predicted_point = np.asarray([det1_back.x, det1_back.y]) + predicted_vector
 
             error = np.linalg.norm(predicted_point - np.asarray([det2.x, det2.y]))
             scores.append(error)
@@ -843,58 +903,84 @@ def foreward_error(tracks1, tracks2):
 
 
 def backward_error(tracks1, tracks2):
+    """Calculates the bee's movement in the first two detections of track2 and calculates where
+    the bee should have been by the end of track1
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :float: difference between expected and real location of last detection in track1
+    """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
+        # If there is only one detection, we cannot predict a movement
         if (len(track2.timestamps) < 2):
-            scores.append(-1.0)  # wert, der niemals vorkommen kann
+            scores.append(-1.0)
         else:
-            det2v = track2.meta[DETKEY][0]
-            det2h = track2.meta[DETKEY][1]
+            det2_front = track2.meta[DETKEY][0]
+            det2_back = track2.meta[DETKEY][1]
             det1 = track1.meta[DETKEY][-1]
 
-            vector = np.asarray([det2h.x - det2v.x, det2h.y - det2v.y])
-            timedif = (det2h.timestamp - det2v.timestamp)
-            move_per_time = vector / timedif
+            vector = np.asarray([det2_back.x - det2_front.x, det2_back.y - det2_front.y])
+            time_diff = (det2_back.timestamp - det2_front.timestamp)
+            # make sure we won't divide by zero
+            assert time_diff > 0, "The detections come from the same frame."
+            move_per_time = vector / time_diff
 
-            time_between_tracks = (det2v.timestamp - det1.timestamp)
+            time_between_tracks = (det2_front.timestamp - det1.timestamp)
             predicted_vector = move_per_time * time_between_tracks
 
-            predicted_point = np.asarray([det2v.x, det2v.y]) - predicted_vector
+            predicted_point = np.asarray([det2_front.x, det2_front.y]) - predicted_vector
 
             error = np.linalg.norm(predicted_point - np.asarray([det1.x, det1.y]))
             scores.append(error)
     return scores
 
 
-def z_orientation_foreward_error(tracks1, tracks2):
+def z_orientation_forward_error(tracks1, tracks2):
+    """Calculates the change of orientation (=the angle in which the bee looks on the hive) within
+    the last two detections of track1
+
+            Arguments:
+                tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+                tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+            Returns:
+                :float: difference between expected and real orientation of the first detection
+                in track2
+    """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
+        # If there is only one detection, we cannot predict a change
+        # A value that cannot appear in the real data is appended
         if (len(track1.timestamps) < 2):
-            scores.append(2 * math.pi)  # wert, der nicht vorkommen kann
+            scores.append(2 * math.pi)
         else:
-            det1v = track1.meta[DETKEY][-2]
-            det1h = track1.meta[DETKEY][-1]
+            det1_front = track1.meta[DETKEY][-2]
+            det1_back = track1.meta[DETKEY][-1]
             det2 = track2.meta[DETKEY][0]
 
             # The rotations must be given in the range [-pi, pi]
-            assert -math.pi <= det1v.orientation <= math.pi
-            assert -math.pi <= det1h.orientation <= math.pi
+            assert -math.pi <= det1_front.orientation <= math.pi
+            assert -math.pi <= det1_back.orientation <= math.pi
             assert -math.pi <= det2.orientation <= math.pi
 
-            wert = (det1h.orientation - det1v.orientation) % (2 * math.pi)
-            if (wert > math.pi):
-                wert = wert - (2 * math.pi)
+            orientation_change = (det1_back.orientation - det1_front.orientation) % (2 * math.pi)
+            if (orientation_change > math.pi):
+                orientation_change = orientation_change - (2 * math.pi)
 
-            timedif = (det1h.timestamp - det1v.timestamp)
-            z_change_per_time = wert / timedif
+            time_diff = (det1_back.timestamp - det1_front.timestamp)
+            z_change_per_time = orientation_change / time_diff
 
-            time_between_tracks = (det2.timestamp - det1h.timestamp)
+            time_between_tracks = (det2.timestamp - det1_back.timestamp)
 
             predicted_change = z_change_per_time * time_between_tracks
 
-            predicted_z = (det1h.orientation + predicted_change) % (2 * math.pi)
+            predicted_z = (det1_back.orientation + predicted_change) % (2 * math.pi)
 
             error = (det2.orientation - predicted_z) % (2 * math.pi)
             if (error > math.pi):
@@ -904,38 +990,49 @@ def z_orientation_foreward_error(tracks1, tracks2):
     return scores
 
 
-# wie groß ist der abstand zwischen dem erwarteten und dem realen
 def z_orientation_backward_error(tracks1, tracks2):
+    """Calculates the change of orientation (=the angle in which the bee looks on the hive) within
+    the first two detections of track2
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :float: difference between expected and real orientation of the last detection
+            in track1
+    """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
+        # If there is only one detection, we cannot predict a change
+        # A value that cannot appear in the real data is appended
         if (len(track2.timestamps) < 2):
-            scores.append(2 * math.pi)  # wert, der nicht vorkommen kann
+            scores.append(2 * math.pi)
         else:
-            det2v = track2.meta[DETKEY][0]
-            det2h = track2.meta[DETKEY][1]
+            det2_front = track2.meta[DETKEY][0]
+            det2_back = track2.meta[DETKEY][1]
             det1 = track1.meta[DETKEY][-1]
 
             # The rotations must be given in the range [-pi, pi]
-            assert -math.pi <= det2v.orientation <= math.pi
-            assert -math.pi <= det2h.orientation <= math.pi
+            assert -math.pi <= det2_front.orientation <= math.pi
+            assert -math.pi <= det2_back.orientation <= math.pi
             assert -math.pi <= det1.orientation <= math.pi
 
-            # Wie verändert sich die Rotation auf dem letzten Vektor des Tracks?
-            rotation = det2v.orientation - det2h.orientation
-            if (rotation > math.pi):
-                rotation = rotation - (2 * math.pi)
+            # How does orientation change within the two detections
+            orientation_change = det2_front.orientation - det2_back.orientation
+            if (orientation_change > math.pi):
+                orientation_change = orientation_change - (2 * math.pi)
 
-            # Wie verändert sich die Rotation also pro Millisekunde?
-            timedif = (det2h.timestamp - det2v.timestamp)
-            z_change_per_time = rotation / timedif
+            # Break it down to time
+            time_diff = (det2_back.timestamp - det2_front.timestamp)
+            z_change_per_time = orientation_change / time_diff
 
-            # Wie viele Millisekunden liegen zwischen den Tracks?
-            time_between_tracks = (det2v.timestamp - det1.timestamp)
+            time_between_tracks = (det2_front.timestamp - det1.timestamp)
 
             predicted_change = z_change_per_time * time_between_tracks
 
-            predicted_z = (det2v.orientation + predicted_change) % (2 * math.pi)
+            predicted_z = (det2_front.orientation + predicted_change) % (2 * math.pi)
 
             error = (det1.orientation - predicted_z) % (2 * math.pi)
             if (error > math.pi):
@@ -945,44 +1042,54 @@ def z_orientation_backward_error(tracks1, tracks2):
     return scores
 
 
-# Hilfsfunktion, gibt den winkelabstand der letzten vektoren an
-def winkelabstand(tracks1, tracks2):
+def angle_difference(tracks1, tracks2):
+    """Function that calculates the angle between the movement-vector of the last two detections
+    in track1 and the first two in track2
+
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :float: absolute angle difference
+        """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
+        # It's not possible to calculate an angle between points
         if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
-            scores.append(
-                -1.0)  # es ergibt keinen sinn, den winkelabstand zwischen punkten zu bestimmen
+            scores.append(-1.0)
 
         else:
 
-            detvorend = track1.meta[DETKEY][-2]
-            detend = track1.meta[DETKEY][-1]
-            arr1 = np.asarray([detend.x - detvorend.x, detend.y - detvorend.y])
+            det1_front = track1.meta[DETKEY][-2]
+            det1_back = track1.meta[DETKEY][-1]
+            vector1 = np.asarray([det1_back.x - det1_front.x, det1_back.y - det1_front.y])
 
-            detvorend2 = track2.meta[DETKEY][0]
-            detend2 = track2.meta[DETKEY][1]
-            arr2 = np.asarray([detend2.x - detvorend2.x, detend2.y - detvorend2.y])
+            det2_front = track2.meta[DETKEY][0]
+            det2_back = track2.meta[DETKEY][1]
+            vector2 = np.asarray([det2_back.x - det2_front.x, det2_back.y - det2_front.y])
 
-            if (np.sum(np.fabs(arr1)) == 0 or np.sum(
-                    np.fabs(arr2)) == 0):  # falls sich die Biene einfach nicht bewegt hat
-                scores.append(
-                    -1.0)  # es ergibt keinen sinn, den winkelabstand zwischen punkten zu bestimmen
+            # If the bee didn't move, we still have a point
+            # And cannot calculate an angle difference
+            if (np.sum(np.fabs(vector1)) == 0 or np.sum(
+                    np.fabs(vector2)) == 0):
+                scores.append(-1.0)
 
             else:
-                # berechne das skalarprodukt
-                dot = np.dot(arr1, arr2)
-                x_modulus = np.sqrt((arr1 * arr1).sum())
-                y_modulus = np.sqrt((arr2 * arr2).sum())
+                # calculate the dot-product
+                dot = np.dot(vector1, vector2)
+                x_modulus = np.sqrt((vector1 * vector1).sum())
+                y_modulus = np.sqrt((vector2 * vector2).sum())
 
                 cos_angle = np.divide(np.divide(dot, x_modulus), y_modulus)
-                cos_angle = np.around(cos_angle,
-                                      decimals=10)  # force numpy to not make cos_angle 1 or -1
+                # force numpy to not make cos_angle 1 or -1
                 # as those are not defined for the arccos!
+                cos_angle = np.around(cos_angle, decimals=10)
                 angle = np.arccos(cos_angle)
 
                 scores.append(angle)
-
     return scores
 
 

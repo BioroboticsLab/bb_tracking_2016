@@ -525,7 +525,7 @@ def calculate_speed(track):
     end = track.meta[DETKEY][-1].timestamp
 
     length = (end - start)
-    assert length > 0 , "Start and end time are the same."
+    assert length > 0, "Start and end time are the same."
 
     # we start with the first detection
     startpoint = (track.meta[DETKEY][0].x, track.meta[DETKEY][0].y)
@@ -756,8 +756,8 @@ def movement_area(tracks1, tracks2):
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
-        #It is not useful to compare the areas if one of the track only consists of one detection
-        if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
+        # It is not useful to compare the areas if one of the track only consists of one detection
+        if len(track1.timestamps) < 2 or len(track2.timestamps) < 2:
             scores.append(-1.0)
         else:
 
@@ -1053,12 +1053,12 @@ def angle_difference(tracks1, tracks2):
 
         Returns:
             :float: absolute angle difference
-        """
+    """
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
         # It's not possible to calculate an angle between points
-        if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
+        if len(track1.timestamps) < 2 or len(track2.timestamps) < 2:
             scores.append(-1.0)
 
         else:
@@ -1093,50 +1093,74 @@ def angle_difference(tracks1, tracks2):
     return scores
 
 
-# Hilfsfunktion, welche für einen Track auf den letzten Detektionen ein gewichtetes
-# Fenster-verfahren anwendet
 def calculate_weighted_window_vector(points, track1):
-    # points is an array of np.arrays of length 3,
-    # representing a point and its timestamp [[x,y,timestampt], , ]
-    # track1 is a boolean, stating if we are in track1 or 2, thats important for the weighting
 
-    # a defaultvector for tracks of length1
+    """Helper to calculate a vector from multiple vectors which are weighted based on how
+    close they are to the end (start) of a track.
+
+    Arguments:
+        points (:obj:`list` of [int,int,float]): [x position of a detection, y porition of a
+            detection, timestamp of the detection]
+        track1 (bool): is it track1 or  not in this case it is track2), this influences if we
+            weight from the front to the end or vice versa
+
+    Returns:
+        :obj:`list` of float: weighted vector normalized on time
+    """
+
+    # a default vector for tracks of length1
     vector = np.asarray([0.0, 0.0])
-    startpoint = points[0]
+    start_point = points[0]
 
-    if (len(points) == 1):
+    if len(points) == 1:
         return vector
 
-    vektordifs = []
+    # A list to append all the differences between the vectors calculated from the given points
+    vector_diffs = []
 
     for point in points[1:]:
-        vektordif = point - startpoint
-        normalized_dif = vektordif / (point[2] - startpoint[2])
-        vektordifs.append(normalized_dif)
-        startpoint = point
+        vector_diff = point - start_point
+        normalized_diff = vector_diff / (point[2] - start_point[2])
+        vector_diffs.append(normalized_diff)
+        start_point = point
 
-    to_be_weighted_len = len(vektordifs)
+    # The weights are powers of 2
+    to_be_weighted_len = len(vector_diffs)
     weights = np.asarray([2 ** i for i in range(to_be_weighted_len)])
 
+    # In track1 the last vector is weighted highest because it is close to the gap
     if track1:
         for i in range(to_be_weighted_len):
-            vektordifs[i] = (vektordifs[i] * weights[i])[:2]  # get rid of the timestamp
-    else:  # im hinteren track werden die ersten detektionen mehr gewichtet
+            vector_diffs[i] = (vector_diffs[i] * weights[i])[:2]  # get rid of the timestamp
+    # In track2 the first vector is weighted highest because it is close to the gap
+    else:
         for i in range(to_be_weighted_len):
-            vektordifs[i] = (vektordifs[i] * weights[-1 - i])[:2]
+            vector_diffs[i] = (vector_diffs[i] * weights[-1 - i])[:2]
 
-    vektorsum = np.sum(vektordifs, axis=0)
-    vector = vektorsum / (sum(weights))
+    # Sum of all the vectors
+    vector_sum = np.sum(vector_diffs, axis=0)
+    # Divided by the weights
+    vector = vector_sum / (sum(weights))
     return vector
 
 
 def weighted_window_xy_length_difference(tracks1, tracks2):
-    window = 4  # 4 bedeutet die letzten 3 vektoren zu betrachten
+    """Function that calculates length difference of the weighted vector for the last movements of
+    track1 and the first movements of track2
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :float: absolute length difference of the two weighted vectors
+    """
+    window = 4  # consider the last three vectors (if existent)
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
-        if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
-            scores.append(-1.0)  # es ergibt keinen sinn, winkel bei punkten zu betrachten
+        if len(track1.timestamps) < 2 or len(track2.timestamps) < 2:
+            scores.append(-1.0)
 
         else:
             short1points = [np.asarray([det.x, det.y, det.timestamp]) for det in
@@ -1155,12 +1179,22 @@ def weighted_window_xy_length_difference(tracks1, tracks2):
 
 
 def weighted_window_x_length_difference(tracks1, tracks2):
+    """Function that calculates length difference of the weighted vector for the last movements of
+    track1 and the first movements of track2 on the x axis
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :float: absolute length difference of the two weighted vectors
+    """
     window = 4
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
         if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
-            scores.append(-1.0)  # es ergibt keinen sinn, winkel bei punkten zu betrachten
+            scores.append(-1.0)
 
         else:
             short1points = [np.asarray([det.x, det.y, det.timestamp]) for det in
@@ -1179,11 +1213,21 @@ def weighted_window_x_length_difference(tracks1, tracks2):
 
 
 def weighted_window_y_length_difference(tracks1, tracks2):
+    """Function that calculates length difference of the weighted vector for the last movements of
+    track1 and the first movements of track2 on the y axis
+
+        Arguments:
+            tracks1 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+            tracks2 (:obj:`list` of :obj:`.Track`): Iterable with Tracks
+
+        Returns:
+            :float: absolute length difference of the two weighted vectors
+    """
     window = 4
     scores = []
     for track1, track2 in zip(tracks1, tracks2):
 
-        if (len(track1.timestamps) < 2 or len(track2.timestamps) < 2):
+        if len(track1.timestamps) < 2 or len(track2.timestamps) < 2:
             scores.append(-1.0)  # es ergibt keinen sinn, winkel bei punkten zu betrachten
 
         else:

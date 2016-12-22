@@ -298,6 +298,18 @@ def score_id_sim_rotating_v(detections1, detections2, rotation_penalty=0.5):
     return score
 
 
+def score_tag_matcher_v(detections1, detections2, matcher):
+
+    assert len(detections1) == len(detections2), 'Detection lists do not have the same length.'
+
+    arr1 = np.array([detection.descriptor for detection in detections1])
+    arr2 = np.array([detection.descriptor for detection in detections2])
+    assert np.all(arr1.shape == arr2.shape), 'Detections do not have' \
+        'the same length of descriptors.'
+    scores = np.full((len(arr1)), 1, dtype='int64') - matcher.matchPairs(arr1, arr2)
+    return scores
+
+
 def score_id_sim_tracks_median_v(tracks1, tracks2):
     """Compares id frequency distributions of tracks by comparing the median (vectorized)
 

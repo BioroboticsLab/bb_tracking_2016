@@ -299,7 +299,16 @@ def score_id_sim_rotating_v(detections1, detections2, rotation_penalty=0.5):
 
 
 def score_tag_matcher_v(detections1, detections2, matcher):
+    """computes the tagMatcher score (vectorized)
 
+    Arguments:
+        detections1 (:obj:`list` of :obj:`.Detection`): Iterable with `.Detection`
+        detections2 (:obj:`list` of :obj:`.Detection`): Iterable with `.Detection`
+        matcher (:obj:`keras.models.Model`): Model that is used to compute tagMatcher score
+
+    Returns:
+        :obj:`np.array`: tagMatcher scores
+    """
     assert len(detections1) == len(detections2), 'Detection lists do not have the same length.'
 
     arr1 = np.array([detection.descriptor for detection in detections1])

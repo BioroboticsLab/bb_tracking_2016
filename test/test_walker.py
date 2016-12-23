@@ -274,13 +274,15 @@ def test_special_datawrappertracks():
     tstamps = list(range(n))
     detections = [Detection(id=ids[i], x=i, y=i, timestamp=tstamps[i], orientation=i, beeId=i,
                             meta={CAMKEY: 0}) for i in range(n)]
+    track0 = Track(id=0, ids=ids[1:9], timestamps=tstamps[1:9], meta={DETKEY: detections[1:9],
+                                                                      track_id: 0})
     track1 = Track(id=1, ids=ids[0:2], timestamps=tstamps[0:2], meta={DETKEY: detections[0:2],
                                                                       track_id: 0})
     track2 = Track(id=2, ids=ids[3:6], timestamps=tstamps[3:6], meta={DETKEY: detections[3:6],
                                                                       track_id: 0})
-    track3 = Track(id=3, ids=ids[9:10], timestamps=tstamps[8:10], meta={DETKEY: detections[8:10],
+    track3 = Track(id=3, ids=ids[8:10], timestamps=tstamps[8:10], meta={DETKEY: detections[8:10],
                                                                         track_id: 0})
-    dw_tracks = DataWrapperTracks([track1, track2, track3], {0: tstamps})
+    dw_tracks = DataWrapperTracks([track0, track1, track2, track3], {0: tstamps})
 
     def score_fun(tracks1, tracks2):
         """Helper to perform scoring in test tracking."""
@@ -296,4 +298,4 @@ def test_special_datawrappertracks():
     for i in range(3):
         walker = SimpleWalker(dw_tracks, score_fun, i + 1, np.inf)
         result_tracks = walker.calc_tracks()
-        assert len(result_tracks) == 3 - i
+        assert len(result_tracks) == 4 - i

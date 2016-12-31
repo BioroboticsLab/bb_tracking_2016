@@ -98,7 +98,8 @@ def plot_fragments(scores, validator, gap, cam_gap=True, interval=5, max_x=None)
     error = scores[scores.value < 1]
     wrong_id = scores[scores.truth_id != scores.calc_id]
     lengths = [fragment_lengths, scores.track_length, wrong_id.track_length, error.track_length]
-    bins = np.arange(0, max(max(fragment_lengths), scores.track_length.max()) + 1, interval)
+    bins = np.arange(0, max(max(fragment_lengths), scores.track_length.max()) + 1 + interval,
+                     interval)
     max_x = max_x or max(bins)
     labels = ["Truth", "Test", "Wrong Id", "Tracking Errors"]
     colors = ["green", "blue", "red", "darkorange"]

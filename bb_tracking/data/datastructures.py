@@ -8,6 +8,8 @@ the datastructures are missing.
 """
 from collections import namedtuple
 from six import PY3
+import re
+
 
 Detection = namedtuple('Detection', ['id', 'timestamp', 'x', 'y', 'orientation', 'beeId', 'descriptor', 'meta'])
 if PY3:
@@ -25,6 +27,17 @@ Attributes:
     meta (:obj:`dict`): dictionary with further information about a detection
         like localizer scores, truth ids, camera ids...
 """
+
+
+def get_frameid_from_detection_id(detection_id):
+    """
+    Function that parses the frameid from the string, that represents a detection-id
+    """
+
+    frame_id = int(re.split('\D+', detection_id)[1])
+
+    return frame_id
+
 
 Track = namedtuple('Track', ['id', 'ids', 'timestamps', 'meta'])
 if PY3:
@@ -48,6 +61,44 @@ Attributes:
     meta (:obj:`dict`): dictionary with uncommon information about a :obj:`Track`
         like scoring metrics
 """
+
+
+def track_split_before_index(track, index):
+    """
+    Splits a track before the given index.
+
+    The parts of the tracks keep their original id so that we can see which ones belonged together.
+
+    returns: two tracks - first part of the original track until index and second part after index
+    """
+
+    # assert isinstance(track, Track), "You need to provide a Track-object"
+    assert 0 <= index <= len(track.timestamps), "Index out of bound"
+
+    track1 = Track(id=track.id, ids=track.ids[:index], timestamps=track.timestamps[:index],
+                   meta={'detections': track.meta['detections'][:index]})
+    track2 = Track(id=track.id, ids=track.ids[index:], timestamps=track.timestamps[index:],
+                   meta={'detections': track.meta['detections'][index:]})
+    return track1, track2
+
+
+def track_split_before_frameid(track, frameid):
+    """
+    Splits a track before a given frameid, if existent
+
+    The parts of the tracks keep their original id so that we can see which ones belonged together.
+
+    returns: two tracks - first part of the original track until frameid and second part after
+    """
+
+    for idx, det_id in enumerate(track.ids):
+        current_frame_id = get_frameid_from_detection_id(det_id)
+        if current_frame_id >= frameid:
+            return track_split_before_index(track, idx)
+
+    # if all frameids are smaller than the one provided: return the full track and an empty one
+    return track_split_before_index(track, len(track.ids))
+
 
 Score = namedtuple('Score', ['value', 'track_id', 'truth_id', 'calc_id', 'metrics', 'alternatives'])
 if PY3:

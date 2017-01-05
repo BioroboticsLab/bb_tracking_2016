@@ -52,6 +52,7 @@ def generate_learning_data(dw_truth, features, frame_diff, radius):
         for key, fun in features.items():
             learning_data[key].extend(fun(tracks_path, frame_objects_test))
         weights = []
+        assert len(tracks_path) == len(frame_objects_test), "To zip we need the same length"
         for track_path, frame_object_test in zip(tracks_path, frame_objects_test):
             truth_path = dw_truth.get_truthid(track_path)
             truth_test = dw_truth.get_truthid(frame_object_test)

@@ -8,7 +8,6 @@ the datastructures are missing.
 """
 from collections import namedtuple
 from six import PY3
-import re
 
 
 Detection = namedtuple('Detection', ['id', 'timestamp', 'x', 'y', 'orientation', 'beeId', 'meta'])
@@ -26,7 +25,6 @@ Attributes:
     meta (:obj:`dict`): dictionary with further information about a detection
         like localizer scores, truth ids, camera ids...
 """
-
 
 Track = namedtuple('Track', ['id', 'ids', 'timestamps', 'meta'])
 if PY3:
@@ -50,7 +48,6 @@ Attributes:
     meta (:obj:`dict`): dictionary with uncommon information about a :obj:`Track`
         like scoring metrics
 """
-
 
 Score = namedtuple('Score', ['value', 'track_id', 'truth_id', 'calc_id', 'metrics', 'alternatives'])
 if PY3:

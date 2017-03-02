@@ -422,6 +422,8 @@ def calc_median_ids(tracks):
     meta_key = 'median_id'
     ids_median = []
     for track in tracks:
+        if isinstance(track, int):
+            print(track)
         if meta_key in track.meta.keys() and track.meta[meta_key][0] == len(track.ids):
             ids_median.append(track.meta[meta_key][1])
         else:
@@ -728,11 +730,7 @@ def gap_speed(tracks1, tracks2):
         time_diff = (det2.timestamp - det1.timestamp)
 
         # make sure we won't divide by zero
-        #assert time_diff > 0, "The detections come from the same frame."
-        if time_diff <=0:
-            print(time_diff)
-            print (det1)
-            print (det2)
+        assert time_diff > 0, "The detections come from the same frame."
 
         distance = math.sqrt((det2.x - det1.x) ** 2 + (det2.y - det1.y) ** 2)
         normalized_distance = distance / time_diff
@@ -864,7 +862,7 @@ def distance_orientations_per_time(detections1, detections2, meta_key=None):
 
     dist_per_time = distance / time_difs
 
-    #assert np.all(np.isfinite(dist_per_time))
+    assert np.all(np.isfinite(dist_per_time))
     return dist_per_time
 
 

@@ -9,6 +9,7 @@ the datastructures are missing.
 from collections import namedtuple
 from six import PY3
 
+
 Detection = namedtuple('Detection', ['id', 'timestamp', 'x', 'y', 'orientation', 'beeId', 'meta'])
 if PY3:
     Detection.__doc__ = """

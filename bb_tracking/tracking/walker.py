@@ -49,7 +49,7 @@ class SimpleWalker(object):
         Arguments:
             data_wrapper (:obj:`.DataWrapper`): a :obj:`.DataWrapper` object to access frame objects
             score_fun (func): scoring function to calculate the weights between two frame objects
-            frame_diff (int): after n frames a close track if no matching object is found
+            frame_diff (int): after n frames close track if no matching object is found
             radius (int): radius in image coordinates to restrict neighborhood search
 
         Keyword Argument:

@@ -101,7 +101,7 @@ class DataWrapperBinary(DataWrapper):
                 id=detection_id, timestamp=frame.timestamp, x=detection.xpos, y=detection.ypos,
                 orientation=0 if np.isinf(detection.zRotation) else detection.zRotation,
                 beeId=[x / 255. for x in detection.decodedId],
-                descriptor= detection.descriptor,
+                descriptor=[d for d in detection.descriptor],
                 meta={mkey: getattr(detection, dkey) for dkey, mkey in meta_keys.items()})
             detection_tuple.meta[CAMKEY] = cam_id
             assert detection_id not in self.detections_dict,\

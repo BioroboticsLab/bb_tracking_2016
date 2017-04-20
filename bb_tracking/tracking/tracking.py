@@ -7,17 +7,18 @@ learning algorithms, hyperparameters and features.
 # pylint:disable=no-member
 from collections import OrderedDict
 import numpy as np
+import os
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
-from tagMatcher.matcher import Matcher
+from .tag_matcher import Matcher
 from ..data.constants import DETKEY
 from .scoring import distance_positions_v, score_id_sim_orientation_v, score_tag_matcher_v
 from .training import train_bin_clf
 
 
 def make_detection_score_fun(dw_truth, frame_diff=1, radius=110, clf=None,
-                             tag_matcher_model_path=None, **kwargs):
+                             use_tag_matcher=False, **kwargs):
     """Function to generate a scoring function that scores tracks and matching detections.
 
     Note:
@@ -35,8 +36,8 @@ def make_detection_score_fun(dw_truth, frame_diff=1, radius=110, clf=None,
         clf (scikit-learn classifier): a scikit-learn classifier that will be trained
         frame_diff (int): after n frames close track if no matching object is found
         radius (int): radius in image coordinates to restrict neighborhood search
+        use_tag_matcher (bool): If True, tag_matcher score is used for tracking. Default: False
         **kwargs (:obj:`dict`): keyword arguments for :func:`train_bin_clf`
-
     Returns:
         tuple: tuple containing:
 
@@ -50,12 +51,12 @@ def make_detection_score_fun(dw_truth, frame_diff=1, radius=110, clf=None,
         distance_positions_v([track.meta[DETKEY][-1] for track in tracks], detections)
     features['score_id_sim_orientation'] = lambda tracks, detections:\
         score_id_sim_orientation_v([track.meta[DETKEY][-1] for track in tracks], detections)
-    if tag_matcher_model_path is not None:
-        matcher = Matcher(tag_matcher_model_path)
+    if use_tag_matcher:
+        model_path = os.join.path(os.path.dirname(__file__), '../../models/tag_matcher.model')
+        matcher = Matcher(model_path)
         features['tag_matcher_score'] = lambda tracks, detections:\
             score_tag_matcher_v([track.meta[DETKEY][-1] for track in tracks], detections, matcher)
     train_bin_clf(clf, dw_truth, features, frame_diff, radius, **kwargs)
-
 
     def score_fun(tracks, detections_test):
         """A scoring function to score tracks and matching detections.
@@ -72,8 +73,9 @@ def make_detection_score_fun(dw_truth, frame_diff=1, radius=110, clf=None,
         detections_path = [track.meta[DETKEY][-1] for track in tracks]
         score_orientations = score_id_sim_orientation_v(detections_path, detections_test)
         score_distances = distance_positions_v(detections_path, detections_test)
-        if tag_matcher_model_path is not None:
-            matcher = Matcher(tag_matcher_model_path)
+        if use_tag_matcher:
+            model_path = os.join.path(os.path.dirname(__file__), '../../models/tag_matcher.model')
+            matcher = Matcher(model_path)
             score_tag_matcher = score_tag_matcher_v(detections_path, detections_test, matcher)
             clf_data = np.array((score_distances, score_orientations, score_tag_matcher)).T
         else:
@@ -92,7 +94,8 @@ def make_detection_score_fun(dw_truth, frame_diff=1, radius=110, clf=None,
     return score_fun, clf
 
 
-def make_track_score_fun(dw_truth, frame_diff=15, radius=np.inf, clf=None, **kwargs):
+def make_track_score_fun(dw_truth, frame_diff=15, radius=np.inf, clf=None, use_tag_matcher=False,
+                         **kwargs):
     """Function to generate a scoring function that scores tracks and matching tracks.
 
     Note:
@@ -106,6 +109,7 @@ def make_track_score_fun(dw_truth, frame_diff=15, radius=np.inf, clf=None, **kwa
 
     Keyword Arguments:
         clf (scikit-learn classifier): a scikit-learn classifier that will be trained
+        use_tag_matcher (bool): If True, tag_matcher score is used for tracking. Default: False
         **kwargs (:obj:`dict`): keyword arguments for :func:`.train_bin_clf`
 
     Returns:
@@ -127,6 +131,12 @@ def make_track_score_fun(dw_truth, frame_diff=15, radius=np.inf, clf=None, **kwa
     features['score_id_sim_orientation'] = lambda tracks, tracks_test:\
         score_id_sim_orientation_v([track.meta[DETKEY][-1] for track in tracks],
                                    [track.meta[DETKEY][0] for track in tracks_test])
+    if use_tag_matcher:
+        model_path = os.join.path(os.path.dirname(__file__), '../../models/tag_matcher.model')
+        matcher = Matcher(model_path)
+        features['tag_matcher_score'] = lambda tracks, tracks_test:\
+            score_tag_matcher_v([track.meta[DETKEY][-1] for track in tracks],
+                                [track.meta[DETKEY][0] for track in tracks_test], matcher)
     train_bin_clf(clf, dw_truth, features, frame_diff, radius, **kwargs)
 
     def score_fun(tracks, tracks_test):
@@ -145,7 +155,13 @@ def make_track_score_fun(dw_truth, frame_diff=15, radius=np.inf, clf=None, **kwa
         detections_test = [track.meta[DETKEY][0] for track in tracks_test]
         score_orientations = score_id_sim_orientation_v(detections_path, detections_test)
         score_distances = distance_positions_v(detections_path, detections_test)
-        clf_data = np.array((score_distances, score_orientations)).T
+        if use_tag_matcher:
+            model_path = os.join.path(os.path.dirname(__file__), '../../models/tag_matcher.model')
+            matcher = Matcher(model_path)
+            score_tag_matcher = score_tag_matcher_v(detections_path, detections_test, matcher)
+            clf_data = np.array((score_distances, score_orientations)).T
+        else:
+            clf_data = np.array((score_distances, score_orientations)).T
         if hasattr(clf, "predict_proba"):
             # we have do adapt the return of predict_proba to be compatible with decision_function
             class_scores = clf.predict_proba(clf_data)

@@ -32,6 +32,8 @@ class DataWrapperPandas(DataWrapper):
 
     detections = None
     """:obj:`pd.DataFrame`: pandas dataframe with all detections"""
+    cam_timestamps = None
+    """:obj:`dict`: ``{cam_id: sorted list of timestamps}`` mapping"""
     detections_dict = None
     """:obj`dict`: dictionary with ``{detection_id: detection}`` mapping for :obj:`.Detection`"""
     beeId_digits = 12
@@ -97,7 +99,13 @@ class DataWrapperPandas(DataWrapper):
         # using a dictionary gives a great lookup speedup with a small generation overhead!
         self.detections_dict = {row.id: Detection(*row)
                                 for row in self.detections[detection_cols].itertuples(index=False)}
-
+        # Prepare the mapping between cam ID and timestamps similar to the datawrapper_binary.
+        # This is required for the tracking.
+        if self.cols[CAMKEY] in self.detections.columns:
+            self.cam_timestamps = dict()
+            for cam_id, sub_df in self.detections.groupby(self.cols[CAMKEY]):
+                self.cam_timestamps[cam_id] = set(sub_df.timestamp.values)
+            self.cam_timestamps = {cam_id: list(sorted(ts)) for cam_id, ts in self.cam_timestamps.items()}
     def clean_data(self, data):
         """Clean the dataframes to use a common format to access all the data.
 

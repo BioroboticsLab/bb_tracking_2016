@@ -35,8 +35,10 @@ class DataWrapperBinary(DataWrapper):
     """:obj:`dict`: ``{(cam_id, timestamp): KDTree}`` mapping"""
     timestamps = None
     """:obj:`list` of timestamp: sorted list with all available timestamps"""
+    position_scale = None
+    """:obj:`list` of timestamp: sorted list with all available timestamps"""
 
-    def __init__(self, repository, meta_keys=None, **kwargs):
+    def __init__(self, repository, meta_keys=None, position_scale=1., **kwargs):
         """Necessary initialization to organize detection data.
 
         Arguments:
@@ -45,6 +47,7 @@ class DataWrapperBinary(DataWrapper):
         Keyword Arguments:
             meta_keys (Optional :obj:`dict`): ``{detecion_key: meta_key}`` mapping that is added
                 as meta field in detections (detection fields defined in the *bb_binary* schema)
+            position_scale (Optional :float:): rescaling factor for position data
             **kwargs (:obj:`dict`): keyword arguments for :func:`Repository.iter_frames()`
         """
         # convert detections to python objects and create dictionaries for fast lookup
@@ -57,6 +60,7 @@ class DataWrapperBinary(DataWrapper):
         cam_timestamps = dict()
         last_fc_id = None
         meta_keys = meta_keys or dict()
+        self.position_scale = position_scale
         for frame, frame_container in repository.iter_frames(**kwargs):
             cam_id = frame_container.camId
             # a different frame containers might have data from a different camera
@@ -98,7 +102,8 @@ class DataWrapperBinary(DataWrapper):
         for detection in frame.detectionsUnion.detectionsDP:
             detection_id = 'f{}d{}c{}'.format(frame.id, detection.idx, cam_id)
             detection_tuple = Detection(
-                id=detection_id, timestamp=frame.timestamp, x=detection.xpos, y=detection.ypos,
+                id=detection_id, timestamp=frame.timestamp, x=detection.xpos * self.position_scale, 
+                y=detection.ypos * self.position_scale,
                 orientation=0 if np.isinf(detection.zRotation) else detection.zRotation,
                 beeId=[x / 255. for x in detection.decodedId],
                 meta={mkey: getattr(detection, dkey) for dkey, mkey in meta_keys.items()})
@@ -107,7 +112,8 @@ class DataWrapperBinary(DataWrapper):
                 "Duplicate key {}".format(detection_id)
             self.detections_dict[detection_id] = detection_tuple
             self.frame_detections[(cam_id, frame.timestamp)].append(detection_tuple)
-            xy_cols.append((detection.xpos, detection.ypos))
+            xy_cols.append((detection.xpos * self.position_scale, 
+                detection.ypos * self.position_scale))
 
         # we might have frames without detections
         if len(xy_cols) > 0:
